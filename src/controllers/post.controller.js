@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
   const postLocalPath = req?.file?.path;
+
   if (!postLocalPath) {
     throw new ApiError(400, "Post file is missing");
   }
@@ -28,7 +29,7 @@ const UploadPost = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, post, "avatar updated successfully"));
+    .json(new ApiResponse(200, post, "post uploaded successfully"));
 });
 
 export { UploadPost };
