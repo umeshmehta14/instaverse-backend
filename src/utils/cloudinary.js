@@ -1,6 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { folderName } from "../constants";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,7 +7,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFile) => {
+const uploadOnCloudinary = async (localFile, folderName) => {
   try {
     if (!localFile) return null;
 
@@ -24,7 +23,7 @@ const uploadOnCloudinary = async (localFile) => {
   }
 };
 
-const deleteFromCloudinary = async (publicId) => {
+const deleteFromCloudinary = async (publicId, folderName) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId, {
       folder: folderName,
@@ -46,4 +45,4 @@ const deleteVideoFromCloudinary = async (publicId) => {
   }
 };
 
-export { uploadOnCloudinary, deleteFromCloudinary, deleteVideoFromCloudinary };
+export { deleteFromCloudinary, deleteVideoFromCloudinary, uploadOnCloudinary };

@@ -1,8 +1,13 @@
+import { profileFolder } from "../constants.js";
+import { Posts } from "../models/posts.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { isValidEmail } from "../utils/isValidEmail.js";
 
 const options = {
@@ -30,7 +35,6 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, username, password, email } = req.body;
-  console.log(fullName, username, password, email);
 
   if (
     !(username?.trim() || fullName?.trim() || password?.trim() || email?.trim())
@@ -209,14 +213,15 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const editUserProfile = asyncHandler(async (req, res) => {
   const { bio, avatar, fullName, portfolio } = req.body;
-  const avatarLocalPath = req.file?.path;
+  const avatarLocalPath = req?.file?.path;
   let user;
+  // if user choose a avatar
   if (avatar) {
     user = await User.findByIdAndUpdate(
       req.user?._id,
       {
         $set: {
-          avatar: { url: avatar.url, publicId: "" },
+          avatar: { url: avatar, publicId: "" },
           bio,
           fullName,
           portfolio,
@@ -231,28 +236,79 @@ const editUserProfile = asyncHandler(async (req, res) => {
   const publicId = req.user?.avatar?.publicId;
 
   if (publicId) {
-    const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-    if (!avatar.url) {
-      throw new ApiError(400, "something went wrong while uploading avatar");
-    }
-    user = await User.findByIdAndUpdate(
-      req.user?._id,
-      {
-        $set: {
-          avatar: { url: avatar.url, publicId: avatar.public_id },
-        },
-      },
-      {
-        new: true,
-      }
-    ).select("-password -refreshToken");
-
+    // if user uploaded avatar then delete the old picture
     if (avatar) {
-      await deleteFromCloudinary(publicId);
+      await deleteFromCloudinary(publicId, profileFolder);
+    }
+    // if user wants to update there picture
+    else {
+      const uploadedAvatar = await uploadOnCloudinary(
+        avatarLocalPath,
+        profileFolder
+      );
+
+      if (!uploadedAvatar.url) {
+        throw new ApiError(400, "something went wrong while uploading avatar");
+      }
+      user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+          $set: {
+            avatar: {
+              url: uploadedAvatar.url,
+              publicId: uploadedAvatar.public_id,
+            },
+            bio,
+            fullName,
+            portfolio,
+          },
+        },
+        {
+          new: true,
+        }
+      ).select("-password -refreshToken");
+      await deleteFromCloudinary(publicId, profileFolder);
     }
   } else {
+    // when the user uploaded its first picture
+    if (!avatar) {
+      const uploadedAvatar = await uploadOnCloudinary(
+        avatarLocalPath,
+        profileFolder
+      );
+
+      if (!uploadedAvatar.url) {
+        throw new ApiError(400, "something went wrong while uploading avatar");
+      }
+      user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+          $set: {
+            avatar: {
+              url: uploadedAvatar.url,
+              publicId: uploadedAvatar.public_id,
+            },
+            bio,
+            fullName,
+            portfolio,
+          },
+        },
+        {
+          new: true,
+        }
+      ).select("-password -refreshToken");
+    }
   }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "profile updated successfully"));
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  editUserProfile,
+};
