@@ -1,6 +1,7 @@
 import { Posts } from "../models/posts.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { posts } from "../utils/postData.js";
 
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
@@ -10,17 +11,17 @@ const UploadPost = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post file is missing");
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  const uploadedPost = await uploadOnCloudinary(postLocalPath);
 
-  if (!avatar.url) {
+  if (!uploadedPost?.url) {
     throw new ApiError(400, "something went wrong while uploading post");
   }
 
   const post = await Posts.create({
-    url: avatar?.url,
+    url: uploadedPost?.url,
     owner: req?.user?._id,
     caption,
-    publicId: avatar?.public_id,
+    publicId: uploadedPost?.public_id,
   });
 
   if (!post) {
@@ -32,4 +33,4 @@ const UploadPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, post, "post uploaded successfully"));
 });
 
-export { UploadPost };
+export { UploadPost, seedPost };

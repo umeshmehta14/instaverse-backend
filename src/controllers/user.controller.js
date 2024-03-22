@@ -1,5 +1,4 @@
 import { profileFolder } from "../constants.js";
-import { Posts } from "../models/posts.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -235,68 +234,91 @@ const editUserProfile = asyncHandler(async (req, res) => {
 
   const publicId = req.user?.avatar?.publicId;
 
-  if (publicId) {
-    // if user uploaded avatar then delete the old picture
-    if (avatar) {
-      await deleteFromCloudinary(publicId, profileFolder);
-    }
-    // if user wants to update there picture
-    else {
-      const uploadedAvatar = await uploadOnCloudinary(
-        avatarLocalPath,
-        profileFolder
-      );
-
-      if (!uploadedAvatar.url) {
-        throw new ApiError(400, "something went wrong while uploading avatar");
-      }
-      user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-          $set: {
-            avatar: {
-              url: uploadedAvatar.url,
-              publicId: uploadedAvatar.public_id,
-            },
-            bio,
-            fullName,
-            portfolio,
-          },
+  if (!avatarLocalPath && !avatar) {
+    // if user doesnt wants to upload/update profile picture then upload remaining data
+    user = await User.findByIdAndUpdate(
+      req.user?._id,
+      {
+        $set: {
+          bio,
+          fullName,
+          portfolio,
         },
-        {
-          new: true,
-        }
-      ).select("-password -refreshToken");
-      await deleteFromCloudinary(publicId, profileFolder);
-    }
+      },
+      {
+        new: true,
+      }
+    ).select("-password -refreshToken");
   } else {
-    // when the user uploaded its first picture
-    if (!avatar) {
-      const uploadedAvatar = await uploadOnCloudinary(
-        avatarLocalPath,
-        profileFolder
-      );
-
-      if (!uploadedAvatar.url) {
-        throw new ApiError(400, "something went wrong while uploading avatar");
+    if (publicId) {
+      // if user uploaded avatar then delete the old picture
+      if (avatar) {
+        await deleteFromCloudinary(publicId, profileFolder);
       }
-      user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-          $set: {
-            avatar: {
-              url: uploadedAvatar.url,
-              publicId: uploadedAvatar.public_id,
-            },
-            bio,
-            fullName,
-            portfolio,
-          },
-        },
-        {
-          new: true,
+      // if user wants to update there picture
+      else {
+        const uploadedAvatar = await uploadOnCloudinary(
+          avatarLocalPath,
+          profileFolder
+        );
+
+        if (!uploadedAvatar?.url) {
+          throw new ApiError(
+            400,
+            "something went wrong while uploading avatar"
+          );
         }
-      ).select("-password -refreshToken");
+        user = await User.findByIdAndUpdate(
+          req.user?._id,
+          {
+            $set: {
+              avatar: {
+                url: uploadedAvatar.url,
+                publicId: uploadedAvatar.public_id,
+              },
+              bio,
+              fullName,
+              portfolio,
+            },
+          },
+          {
+            new: true,
+          }
+        ).select("-password -refreshToken");
+        await deleteFromCloudinary(publicId, profileFolder);
+      }
+    } else {
+      // when the user uploaded its first picture
+      if (!avatar) {
+        const uploadedAvatar = await uploadOnCloudinary(
+          avatarLocalPath,
+          profileFolder
+        );
+
+        if (!uploadedAvatar.url) {
+          throw new ApiError(
+            400,
+            "something went wrong while uploading avatar"
+          );
+        }
+        user = await User.findByIdAndUpdate(
+          req.user?._id,
+          {
+            $set: {
+              avatar: {
+                url: uploadedAvatar.url,
+                publicId: uploadedAvatar.public_id,
+              },
+              bio,
+              fullName,
+              portfolio,
+            },
+          },
+          {
+            new: true,
+          }
+        ).select("-password -refreshToken");
+      }
     }
   }
 
