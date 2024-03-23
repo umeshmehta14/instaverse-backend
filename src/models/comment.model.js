@@ -2,12 +2,12 @@ import { Schema, model } from "mongoose";
 
 const commentSchema = new Schema(
   {
-    postId: { type: Schema.Types.ObjectId, ref: "Post" },
-    user: { type: Schema.Types.ObjectId, ref: "User" },
-    text: { type: String },
+    postId: { type: Schema.Types.ObjectId, ref: "Post", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, required: true },
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
 
-const Comment = new model("Comment", commentSchema);
+export const Comment = new model("Comment", commentSchema);
