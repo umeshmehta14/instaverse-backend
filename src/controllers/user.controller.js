@@ -327,6 +327,8 @@ const editUserProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "profile updated successfully"));
 });
 
+const addBookmark
+
 export {
   registerUser,
   loginUser,
