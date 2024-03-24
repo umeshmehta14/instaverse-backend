@@ -1,10 +1,12 @@
 import { Router } from "express";
 import {
+  addBookmark,
   editUserProfile,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
+  removeBookmark,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -19,5 +21,7 @@ userRouter.route("/refresh-token").post(refreshAccessToken);
 userRouter
   .route("/update-profile")
   .post(verifyJwt, upload.single("picture"), editUserProfile);
+userRouter.route("/bookmark/:postId").post(verifyJwt, addBookmark);
+userRouter.route("/bookmark/:postId").delete(verifyJwt, removeBookmark);
 
 export default userRouter;

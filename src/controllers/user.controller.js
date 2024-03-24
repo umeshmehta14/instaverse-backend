@@ -1,3 +1,4 @@
+import { isValidObjectId } from "mongoose";
 import { profileFolder } from "../constants.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -327,7 +328,66 @@ const editUserProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "profile updated successfully"));
 });
 
-const addBookmark
+const addBookmark = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!postId || !isValidObjectId(postId)) {
+    throw new ApiError(404, "Invalid post id");
+  }
+
+  const userId = req?.user?._id;
+  const user = await User.findOne({ _id: userId });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.bookmarks.push(postId);
+  await user.save();
+  await User.populate(user, { path: "bookmarks", select: "_id url" });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { bookmarks: user.bookmarks },
+        "Bookmark added successfully"
+      )
+    );
+});
+
+const removeBookmark = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!postId || !isValidObjectId(postId)) {
+    throw new ApiError(404, "Invalid post id");
+  }
+
+  const userId = req.user?._id;
+  const user = await User.findOne({ _id: userId });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.bookmarks = user?.bookmarks?.filter(
+    (bookmark) => bookmark?.toString() !== postId
+  );
+
+  await user.save();
+  await User.populate(user, { path: "bookmarks", select: "_id url" });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { bookmarks: user.bookmarks },
+        "Bookmark removed successfully"
+      )
+    );
+});
 
 export {
   registerUser,
@@ -335,4 +395,6 @@ export {
   logoutUser,
   refreshAccessToken,
   editUserProfile,
+  addBookmark,
+  removeBookmark,
 };
