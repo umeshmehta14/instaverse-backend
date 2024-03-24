@@ -2,11 +2,13 @@ import { Router } from "express";
 import {
   addBookmark,
   editUserProfile,
+  followUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
   removeBookmark,
+  unfollowUser,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -23,5 +25,8 @@ userRouter
   .post(verifyJwt, upload.single("picture"), editUserProfile);
 userRouter.route("/bookmark/:postId").post(verifyJwt, addBookmark);
 userRouter.route("/bookmark/:postId").delete(verifyJwt, removeBookmark);
+
+userRouter.route("/follow/:userId").patch(verifyJwt, followUser);
+userRouter.route("/unfollow/:userId").patch(verifyJwt, unfollowUser);
 
 export default userRouter;

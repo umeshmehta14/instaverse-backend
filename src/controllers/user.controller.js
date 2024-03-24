@@ -389,6 +389,89 @@ const removeBookmark = asyncHandler(async (req, res) => {
     );
 });
 
+const followUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(404, "Invalid user id");
+  }
+  const followerId = req?.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.follower.push(followerId);
+  await user.save();
+
+  const followingUser = await User.findById(followerId);
+  if (!followingUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  followingUser.following.push(userId);
+  await followingUser.save();
+  await User.populate(followingUser, {
+    path: "follower",
+    select: "_id avatar.url username",
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { follower: user.follower },
+        "following updated successfully"
+      )
+    );
+});
+
+const unfollowUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(404, "Invalid user id");
+  }
+  const followerId = req?.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.follower = user?.follower?.filter(
+    (follow) => follow?.toString() !== followerId.toString()
+  );
+
+  await user.save();
+
+  const followingUser = await User.findById(followerId);
+  if (!followingUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  followingUser.following = followingUser?.following?.filter(
+    (follow) => follow?.toString() !== userId
+  );
+  await followingUser.save();
+  await User.populate(followingUser, {
+    path: "follower",
+    select: "_id avatar.url username follower following",
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { followers: user.followers },
+        "following updated successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -397,4 +480,6 @@ export {
   editUserProfile,
   addBookmark,
   removeBookmark,
+  followUser,
+  unfollowUser,
 };
