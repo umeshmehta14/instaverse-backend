@@ -328,6 +328,52 @@ const editUserProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "profile updated successfully"));
 });
 
+const getBookmark = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req?.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "bookmarks",
+        foreignField: "_id",
+        as: "bookmarks",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!user) {
+    throw new ApiError(404, "something went wrong ");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, user[0].bookmarks || [], "User found successfully")
+    );
+});
+
 const addBookmark = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
@@ -336,22 +382,56 @@ const addBookmark = asyncHandler(async (req, res) => {
   }
 
   const userId = req?.user?._id;
-  const user = await User.findOne({ _id: userId });
+  const updatedUser = await User.findOneAndUpdate(
+    { _id: userId },
+    { $addToSet: { bookmarks: postId } },
+    { new: true }
+  );
 
-  if (!user) {
+  if (!updatedUser) {
     throw new ApiError(404, "User not found");
   }
 
-  user.bookmarks.push(postId);
-  await user.save();
-  await User.populate(user, { path: "bookmarks", select: "_id url" });
+  const userBookmark = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req?.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "bookmarks",
+        foreignField: "_id",
+        as: "bookmarks",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { bookmarks: user.bookmarks },
+        userBookmark[0].bookmarks,
         "Bookmark added successfully"
       )
     );
@@ -365,26 +445,145 @@ const removeBookmark = asyncHandler(async (req, res) => {
   }
 
   const userId = req.user?._id;
-  const user = await User.findOne({ _id: userId });
 
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  user.bookmarks = user?.bookmarks?.filter(
-    (bookmark) => bookmark?.toString() !== postId
+  const updatedUser = await User.findOneAndUpdate(
+    { _id: userId },
+    { $pull: { bookmarks: postId } },
+    { new: true }
   );
 
-  await user.save();
-  await User.populate(user, { path: "bookmarks", select: "_id url" });
+  if (!updatedUser) {
+    throw new ApiError(404, "User not found");
+  }
+  const userBookmark = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req?.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "bookmarks",
+        foreignField: "_id",
+        as: "bookmarks",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { bookmarks: user.bookmarks },
+        userBookmark[0].bookmarks || [],
         "Bookmark removed successfully"
+      )
+    );
+});
+
+const getFollower = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(404, "Invalid user id");
+  }
+
+  const followers = await User.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(userId) },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "follower",
+        foreignField: "_id",
+        as: "follower",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "avatar.url": 1,
+              follower: 1,
+              following: 1,
+              username: 1,
+              fullName: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        followers[0].follower || [],
+        "followers fetched successfully"
+      )
+    );
+});
+
+const getFollowing = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(404, "Invalid user id");
+  }
+
+  const followings = await User.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(userId) },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "following",
+        foreignField: "_id",
+        as: "following",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "avatar.url": 1,
+              follower: 1,
+              following: 1,
+              username: 1,
+              fullName: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        followings[0].following || [],
+        "followers fetched successfully"
       )
     );
 });
@@ -517,7 +716,7 @@ const removeFollower = asyncHandler(async (req, res) => {
     );
 });
 
-const getGuestUsers = asyncHandler(async (req, res) => {
+const getGuestUsers = asyncHandler(async (_, res) => {
   const guestUsers = await User.find({ guest: true });
   if (!guestUsers) {
     throw new ApiError(
@@ -557,17 +756,135 @@ const getSearchedUsers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { users }, "User found successfully"));
 });
 
+const getUserById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId && !isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid UserId provided");
+  }
+
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "_id",
+        foreignField: "owner",
+        as: "posts",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        username: 1,
+        fullName: 1,
+        email: 1,
+        avatar: 1,
+        bio: 1,
+        portfolio: 1,
+        followers: 1,
+        following: 1,
+        posts: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user[0], "User found successfully"));
+});
+
+const getLikedPost = asyncHandler(async (req, res) => {
+  const likedPost = await User.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(req?.user?._id) },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "likedPosts",
+        foreignField: "_id",
+        as: "likedPosts",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!likedPost) {
+    throw new ApiError(400, "something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        likedPost[0].likedPosts || [],
+        "Liked posts fetched successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   editUserProfile,
+  getBookmark,
   addBookmark,
   removeBookmark,
+  getFollower,
+  getFollowing,
   followUser,
   unfollowUser,
   removeFollower,
   getGuestUsers,
   getSearchedUsers,
+  getUserById,
+  getLikedPost,
 };

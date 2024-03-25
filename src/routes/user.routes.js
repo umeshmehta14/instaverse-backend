@@ -3,8 +3,13 @@ import {
   addBookmark,
   editUserProfile,
   followUser,
+  getBookmark,
+  getFollower,
+  getFollowing,
   getGuestUsers,
+  getLikedPost,
   getSearchedUsers,
+  getUserById,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -26,14 +31,21 @@ userRouter.route("/refresh-token").post(refreshAccessToken);
 userRouter
   .route("/update-profile")
   .post(verifyJwt, upload.single("picture"), editUserProfile);
+
+userRouter.route("/bookmark").get(verifyJwt, getBookmark);
 userRouter.route("/bookmark/:postId").post(verifyJwt, addBookmark);
 userRouter.route("/bookmark/:postId").delete(verifyJwt, removeBookmark);
 
+userRouter.route("/follower/:userId").get(verifyJwt, getFollower);
+userRouter.route("/following/:userId").get(verifyJwt, getFollowing);
 userRouter.route("/follow/:userId").patch(verifyJwt, followUser);
 userRouter.route("/unfollow/:userId").patch(verifyJwt, unfollowUser);
 userRouter.route("/remove-follower/:userId").patch(verifyJwt, removeFollower);
 
 userRouter.route("/guest").get(verifyJwt, getGuestUsers);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
+
+userRouter.route("/liked-posts").get(verifyJwt, getLikedPost);
+userRouter.route("/:userId").get(verifyJwt, getUserById);
 
 export default userRouter;
