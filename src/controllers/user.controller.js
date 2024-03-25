@@ -531,6 +531,32 @@ const getGuestUsers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, guestUsers, "guest users fetched successfully"));
 });
 
+const getSearchedUsers = asyncHandler(async (req, res) => {
+  const { query } = req.query;
+
+  if (!query) {
+    throw new ApiError(400, "Search query is required");
+  }
+
+  const users = await User.find({
+    $and: [
+      {
+        _id: { $ne: req?.user?._id },
+      },
+      {
+        $or: [
+          { username: { $regex: query, $options: "i" } },
+          { fullName: { $regex: query, $options: "i" } },
+        ],
+      },
+    ],
+  }).select("username fullName avatar.url _id follower");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { users }, "User found successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -543,4 +569,5 @@ export {
   unfollowUser,
   removeFollower,
   getGuestUsers,
+  getSearchedUsers,
 };
