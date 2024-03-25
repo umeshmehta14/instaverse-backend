@@ -3,11 +3,13 @@ import {
   addBookmark,
   editUserProfile,
   followUser,
+  getGuestUsers,
   loginUser,
   logoutUser,
   refreshAccessToken,
   registerUser,
   removeBookmark,
+  removeFollower,
   unfollowUser,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
@@ -28,5 +30,8 @@ userRouter.route("/bookmark/:postId").delete(verifyJwt, removeBookmark);
 
 userRouter.route("/follow/:userId").patch(verifyJwt, followUser);
 userRouter.route("/unfollow/:userId").patch(verifyJwt, unfollowUser);
+userRouter.route("/remove-follower/:userId").patch(verifyJwt, removeFollower);
+
+userRouter.route("/guest").get(getGuestUsers);
 
 export default userRouter;

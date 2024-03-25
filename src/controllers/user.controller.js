@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { profileFolder } from "../constants.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -412,9 +412,10 @@ const followUser = asyncHandler(async (req, res) => {
 
   followingUser.following.push(userId);
   await followingUser.save();
-  await User.populate(followingUser, {
-    path: "follower",
-    select: "_id avatar.url username",
+
+  const populatedFollowingUser = await User.findById(followerId).populate({
+    path: "following",
+    select: "_id username avatar.url following follower",
   });
 
   return res
@@ -422,7 +423,7 @@ const followUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { follower: user.follower },
+        { following: populatedFollowingUser.following },
         "following updated successfully"
       )
     );
@@ -456,9 +457,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
     (follow) => follow?.toString() !== userId
   );
   await followingUser.save();
-  await User.populate(followingUser, {
-    path: "follower",
-    select: "_id avatar.url username follower following",
+  const populatedFollowingUser = await User.findById(followerId).populate({
+    path: "following",
+    select: "_id username avatar.url following follower",
   });
 
   return res
@@ -466,10 +467,68 @@ const unfollowUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { followers: user.followers },
+        { following: populatedFollowingUser.following },
         "following updated successfully"
       )
     );
+});
+
+const removeFollower = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(404, "Invalid user id");
+  }
+  const followerId = req?.user?._id;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.following = user?.following?.filter(
+    (follow) => follow?.toString() !== followerId.toString()
+  );
+
+  await user.save();
+
+  const followingUser = await User.findById(followerId);
+  if (!followingUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  followingUser.follower = followingUser?.follower?.filter(
+    (follow) => follow?.toString() !== userId
+  );
+  await followingUser.save();
+  const populatedFollowingUser = await User.findById(followerId).populate({
+    path: "follower",
+    select: "_id username avatar.url following follower",
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { follower: populatedFollowingUser.follower },
+        "following updated successfully"
+      )
+    );
+});
+
+const getGuestUsers = asyncHandler(async (req, res) => {
+  const guestUsers = await User.find({ guest: true });
+  if (!guestUsers) {
+    throw new ApiError(
+      500,
+      "Something went wrong when trying to get guest users"
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, guestUsers, "guest users fetched successfully"));
 });
 
 export {
@@ -482,4 +541,6 @@ export {
   removeBookmark,
   followUser,
   unfollowUser,
+  removeFollower,
+  getGuestUsers,
 };
