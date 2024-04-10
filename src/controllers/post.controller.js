@@ -81,10 +81,48 @@ const editPost = asyncHandler(async (req, res) => {
 });
 
 const getAllPost = asyncHandler(async (req, res) => {
-  const posts = await Posts.find({}).sort({ createdAt: -1 });
+  const page = req.query.page ? parseInt(req.query.page) : 1;
+  const perPage = 8;
+
+  const options = {
+    page,
+    limit: perPage,
+    sort: { createdAt: -1 },
+  };
+
+  const posts = await Posts.aggregatePaginate([], options);
+  if (!posts) {
+    throw new ApiError(500, "something went wrong when trying to find posts");
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, posts, "Posts fetched successfully"));
 });
 
-export { UploadPost, deletePost, editPost, getAllPost };
+const getHomePosts = asyncHandler(async (req, res) => {
+  const currentUser = req.user;
+  const followingUsers = currentUser.following;
+
+  const options = {
+    page: req.query.page || 1,
+    limit: 8,
+    sort: { createdAt: -1 },
+  };
+
+  const posts = await Posts.aggregatePaginate(
+    [
+      { $match: { owner: { $in: followingUsers } } },
+      { $sort: { createdAt: -1 } },
+    ],
+    options
+  );
+
+  if (!posts) {
+    throw new ApiError(500, "something went wrong when trying to find posts");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, posts, "Posts fetched successfully"));
+});
+
+export { UploadPost, deletePost, editPost, getAllPost, getHomePosts };
