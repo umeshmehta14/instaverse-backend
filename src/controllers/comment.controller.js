@@ -2,6 +2,7 @@ import { isValidObjectId } from "mongoose";
 import { Comment } from "../models/comment.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
 
 const getPostComments = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -64,4 +65,26 @@ const deleteComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Comment deleted successfully"));
 });
 
-export { getPostComments, addComment, deleteComment };
+const editComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const { text } = req.body;
+
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    { text },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong updating comment");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "comment updated successfully"));
+});
+
+export { getPostComments, addComment, deleteComment, editComment };
