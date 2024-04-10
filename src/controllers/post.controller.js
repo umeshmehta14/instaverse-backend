@@ -80,4 +80,11 @@ const editPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
 });
 
-export { UploadPost, deletePost, editPost };
+const getAllPost = asyncHandler(async (req, res) => {
+  const posts = await Posts.find({}).sort({ createdAt: -1 });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, posts, "Posts fetched successfully"));
+});
+
+export { UploadPost, deletePost, editPost, getAllPost };
