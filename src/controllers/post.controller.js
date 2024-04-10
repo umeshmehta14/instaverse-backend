@@ -1,3 +1,4 @@
+import mongoose, { isValidObjectId } from "mongoose";
 import { postFolder } from "../constants.js";
 import { Posts } from "../models/posts.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -7,6 +8,7 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { User } from "../models/user.model.js";
 
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
@@ -111,7 +113,11 @@ const getHomePosts = asyncHandler(async (req, res) => {
 
   const posts = await Posts.aggregatePaginate(
     [
-      { $match: { owner: { $in: followingUsers } } },
+      {
+        $match: {
+          $or: [{ owner: { $in: followingUsers } }, { owner: currentUser._id }],
+        },
+      },
       { $sort: { createdAt: -1 } },
     ],
     options
@@ -125,4 +131,100 @@ const getHomePosts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, posts, "Posts fetched successfully"));
 });
 
-export { UploadPost, deletePost, editPost, getAllPost, getHomePosts };
+const addLike = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!isValidObjectId(postId)) {
+    throw new ApiError(400, "Invalid post id");
+  }
+
+  const likedPost = await Posts.findById(postId);
+
+  if (!likedPost) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  likedPost.likes.unshift(req.user?._id);
+
+  await likedPost.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "post liked successfully"));
+});
+
+const removeLike = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!isValidObjectId(postId)) {
+    throw new ApiError(400, "Invalid post id");
+  }
+  const likedPost = await Posts.findById(postId);
+
+  const indexOfUser = likedPost.likes.indexOf(req.user?._id);
+  likedPost.likes.splice(indexOfUser, 1);
+  await likedPost.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Like removed successfully"));
+});
+
+const getLikedUsers = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  if (!isValidObjectId(postId)) {
+    throw new ApiError(400, "Invalid post id");
+  }
+  const likedPost = await Posts.findById(postId);
+  if (!likedPost) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  const likedUsers = await Posts.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "likes",
+        foreignField: "_id",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+              follower: 1,
+              following: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        likes: 1,
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, likedUsers, "Users fetched successfully"));
+});
+
+export {
+  UploadPost,
+  deletePost,
+  editPost,
+  getAllPost,
+  getHomePosts,
+  addLike,
+  removeLike,
+  getLikedUsers,
+};
