@@ -8,7 +8,6 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
-import { User } from "../models/user.model.js";
 
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
