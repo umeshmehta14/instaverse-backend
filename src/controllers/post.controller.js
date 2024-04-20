@@ -82,77 +82,179 @@ const editPost = asyncHandler(async (req, res) => {
 });
 
 const getAllPost = asyncHandler(async (req, res) => {
-  const page = req.query.page ? parseInt(req.query.page) : 1;
-  const perPage = 8;
+  const page = parseInt(req.query.page) || 1;
+  const perPage = 5;
 
-  const options = {
-    page,
-    limit: perPage,
-    sort: { createdAt: -1 },
-  };
+  const skip = (page - 1) * perPage;
 
-  const aggregationPipeline = [
+  const totalPosts = await Posts.countDocuments();
+  const totalPages = Math.ceil(totalPosts / perPage);
+
+  const posts = await Posts.aggregate([
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+      },
+    },
     {
       $lookup: {
         from: "users",
-        localField: "likes",
+        localField: "owner",
         foreignField: "_id",
-        as: "hello",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
       },
     },
     {
-      $project: {
-        _id: 1,
-        likes: 1,
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
       },
     },
-  ];
+    {
+      $sort: { createdAt: -1 },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: perPage,
+    },
+  ]);
 
-  const posts = await Posts.aggregatePaginate(aggregationPipeline, options);
   if (!posts) {
     throw new ApiError(500, "something went wrong when trying to find posts");
   }
-  return res
-    .status(200)
-    .json(new ApiResponse(200, posts, "Posts fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        posts,
+        totalPosts,
+        totalPages,
+        currentPage: page,
+        postsFetched: posts?.length,
+      },
+      "Posts fetched successfully"
+    )
+  );
 });
 
 const getHomePosts = asyncHandler(async (req, res) => {
   const currentUser = req.user;
   const followingUsers = currentUser.following;
+  const page = parseInt(req.query.page) || 1;
+  const perPage = 5;
 
-  const options = {
-    page: req.query.page || 1,
-    limit: 8,
-    sort: { createdAt: -1 },
-  };
+  const skip = (page - 1) * perPage;
 
-  const posts = await Posts.aggregatePaginate(
-    [
-      {
-        $match: {
-          $or: [{ owner: { $in: followingUsers } }, { owner: currentUser._id }],
-        },
+  const totalPosts = await Posts.countDocuments({
+    $or: [{ owner: { $in: followingUsers } }, { owner: currentUser._id }],
+  });
+  const totalPages = Math.ceil(totalPosts / perPage);
+
+  const posts = await Posts.aggregate([
+    {
+      $match: {
+        $or: [{ owner: { $in: followingUsers } }, { owner: currentUser._id }],
       },
-      {
-        $lookup: {
-          from: "comments",
-          localField: "_id",
-          foreignField: "postId",
-          as: "comments",
-        },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
       },
-      { $sort: { createdAt: -1 } },
-    ],
-    options
-  );
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $sort: { createdAt: -1 },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: perPage,
+    },
+  ]);
 
   if (!posts) {
-    throw new ApiError(500, "something went wrong when trying to find posts");
+    throw new ApiError(500, "Failed to fetch posts");
   }
-  return res
-    .status(200)
-    .json(new ApiResponse(200, posts, "Posts fetched successfully"));
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        posts,
+        totalPosts,
+        totalPages,
+        currentPage: page,
+        postsFetched: posts?.length,
+      },
+      "Posts fetched successfully"
+    )
+  );
 });
 
 const addLike = asyncHandler(async (req, res) => {
