@@ -91,7 +91,24 @@ const getAllPost = asyncHandler(async (req, res) => {
     sort: { createdAt: -1 },
   };
 
-  const posts = await Posts.aggregatePaginate([], options);
+  const aggregationPipeline = [
+    {
+      $lookup: {
+        from: "users",
+        localField: "likes",
+        foreignField: "_id",
+        as: "hello",
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        likes: 1,
+      },
+    },
+  ];
+
+  const posts = await Posts.aggregatePaginate(aggregationPipeline, options);
   if (!posts) {
     throw new ApiError(500, "something went wrong when trying to find posts");
   }
@@ -115,6 +132,14 @@ const getHomePosts = asyncHandler(async (req, res) => {
       {
         $match: {
           $or: [{ owner: { $in: followingUsers } }, { owner: currentUser._id }],
+        },
+      },
+      {
+        $lookup: {
+          from: "comments",
+          localField: "_id",
+          foreignField: "postId",
+          as: "comments",
         },
       },
       { $sort: { createdAt: -1 } },
@@ -217,6 +242,55 @@ const getLikedUsers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, likedUsers, "Users fetched successfully"));
 });
 
+const getPostById = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!isValidObjectId(postId)) {
+    throw new ApiError(400, "Invalid post id");
+  }
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              avatar: 1,
+              username: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post, "post found successfully"));
+});
+
 export {
   UploadPost,
   deletePost,
@@ -226,4 +300,5 @@ export {
   addLike,
   removeLike,
   getLikedUsers,
+  getPostById,
 };

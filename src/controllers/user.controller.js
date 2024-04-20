@@ -370,7 +370,11 @@ const getBookmark = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, user[0].bookmarks || [], "User found successfully")
+      new ApiResponse(
+        200,
+        user[0].bookmarks || [],
+        "Bookmark fetched successfully"
+      )
     );
 });
 
@@ -785,6 +789,11 @@ const getUserById = asyncHandler(async (req, res) => {
             },
           },
           {
+            $sort: {
+              createdAt: 1,
+            },
+          },
+          {
             $project: {
               _id: 1,
               likes: 1,
@@ -839,6 +848,11 @@ const getLikedPost = asyncHandler(async (req, res) => {
               localField: "_id",
               foreignField: "postId",
               as: "comments",
+            },
+          },
+          {
+            $sort: {
+              createdAt: 1,
             },
           },
           {
