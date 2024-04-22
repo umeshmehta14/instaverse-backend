@@ -349,7 +349,6 @@ const getLikedUsers = asyncHandler(async (req, res) => {
     },
     {
       $project: {
-        _id: 1,
         likes: 1,
       },
     },
@@ -357,7 +356,9 @@ const getLikedUsers = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, likedUsers, "Users fetched successfully"));
+    .json(
+      new ApiResponse(200, likedUsers[0].likes, "Users fetched successfully")
+    );
 });
 
 const getPostById = asyncHandler(async (req, res) => {
