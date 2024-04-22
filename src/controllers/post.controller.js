@@ -136,6 +136,14 @@ const getAllPost = asyncHandler(async (req, res) => {
       },
     },
     {
+      $addFields: {
+        totalComments: { $size: "$comments" },
+      },
+    },
+    {
+      $unset: "comments",
+    },
+    {
       $sort: { createdAt: -1 },
     },
     {
@@ -226,6 +234,14 @@ const getHomePosts = asyncHandler(async (req, res) => {
           },
         ],
       },
+    },
+    {
+      $addFields: {
+        totalComments: { $size: "$comments" },
+      },
+    },
+    {
+      $unset: "comments",
     },
     {
       $sort: { createdAt: -1 },
@@ -363,6 +379,26 @@ const getPostById = asyncHandler(async (req, res) => {
         localField: "_id",
         foreignField: "postId",
         as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+        ],
       },
     },
     {
