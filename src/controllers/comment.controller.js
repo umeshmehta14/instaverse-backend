@@ -87,4 +87,58 @@ const editComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "comment updated successfully"));
 });
 
-export { getPostComments, addComment, deleteComment, editComment };
+const addLikeToComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    { $push: { likes: req.user._id } },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong while liking comment");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "comment liked successfully"));
+});
+
+const removeLikeFromComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    { $pull: { likes: req.user._id } },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(
+      400,
+      "Something went wrong while removing like from comment"
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "like removed successfully"));
+});
+
+export {
+  getPostComments,
+  addComment,
+  deleteComment,
+  editComment,
+  addLikeToComment,
+  removeLikeFromComment,
+};
