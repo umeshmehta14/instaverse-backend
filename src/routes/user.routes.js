@@ -42,7 +42,7 @@ userRouter.route("/follow/:userId").patch(verifyJwt, followUser);
 userRouter.route("/unfollow/:userId").patch(verifyJwt, unfollowUser);
 userRouter.route("/remove-follower/:userId").patch(verifyJwt, removeFollower);
 
-userRouter.route("/guest").get(verifyJwt, getGuestUsers);
+userRouter.route("/guest").get(getGuestUsers);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
 
 userRouter.route("/liked-posts").get(verifyJwt, getLikedPost);

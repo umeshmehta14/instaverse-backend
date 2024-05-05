@@ -1,4 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
+import jwt from "jsonwebtoken";
+
 import { profileFolder } from "../constants.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
