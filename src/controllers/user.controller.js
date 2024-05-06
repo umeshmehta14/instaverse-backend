@@ -885,6 +885,29 @@ const getLikedPost = asyncHandler(async (req, res) => {
     );
 });
 
+const getSuggestedUser = asyncHandler(async (req, res) => {
+  const currentUser = req.user;
+
+  const suggestedUsers = await User.find({
+    _id: { $ne: currentUser._id },
+    $and: [
+      { _id: { $nin: currentUser.following } },
+      { _id: { $nin: currentUser.followers } },
+      { _id: { $in: currentUser.following } },
+    ],
+  }).limit(5);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        suggestedUsers || [],
+        "Suggested users fetched successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -903,4 +926,5 @@ export {
   getSearchedUsers,
   getUserById,
   getLikedPost,
+  getSuggestedUser,
 };

@@ -9,6 +9,7 @@ import {
   getGuestUsers,
   getLikedPost,
   getSearchedUsers,
+  getSuggestedUser,
   getUserById,
   loginUser,
   logoutUser,
@@ -43,6 +44,7 @@ userRouter.route("/unfollow/:userId").patch(verifyJwt, unfollowUser);
 userRouter.route("/remove-follower/:userId").patch(verifyJwt, removeFollower);
 
 userRouter.route("/guest").get(getGuestUsers);
+userRouter.route("/suggested-user").get(verifyJwt, getSuggestedUser);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
 
 userRouter.route("/liked-posts").get(verifyJwt, getLikedPost);
