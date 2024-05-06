@@ -832,6 +832,76 @@ const getUserById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user[0], "User found successfully"));
 });
 
+const getUserByUsername = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username) {
+    throw new ApiError(400, "username required");
+  }
+
+  const user = await User.aggregate([
+    {
+      $match: {
+        username,
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "_id",
+        foreignField: "owner",
+        as: "posts",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $sort: {
+              createdAt: 1,
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        username: 1,
+        fullName: 1,
+        email: 1,
+        avatar: 1,
+        bio: 1,
+        portfolio: 1,
+        followers: 1,
+        following: 1,
+        posts: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user[0], "User found successfully"));
+});
+
 const getLikedPost = asyncHandler(async (req, res) => {
   const likedPost = await User.aggregate([
     {
@@ -927,4 +997,5 @@ export {
   getUserById,
   getLikedPost,
   getSuggestedUser,
+  getUserByUsername,
 };

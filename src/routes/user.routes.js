@@ -11,6 +11,7 @@ import {
   getSearchedUsers,
   getSuggestedUser,
   getUserById,
+  getUserByUsername,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -48,6 +49,7 @@ userRouter.route("/suggested-user").get(verifyJwt, getSuggestedUser);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
 
 userRouter.route("/liked-posts").get(verifyJwt, getLikedPost);
+userRouter.route("/:username").get(verifyJwt, getUserByUsername);
 userRouter.route("/:userId").get(verifyJwt, getUserById);
 
 export default userRouter;
