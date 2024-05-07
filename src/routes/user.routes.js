@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
   addBookmark,
+  addToSearchList,
+  clearSearchList,
   editUserProfile,
   followUser,
   getBookmark,
@@ -18,6 +20,7 @@ import {
   registerUser,
   removeBookmark,
   removeFollower,
+  removeFromSearchList,
   unfollowUser,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
@@ -47,6 +50,12 @@ userRouter.route("/remove-follower/:userId").patch(verifyJwt, removeFollower);
 userRouter.route("/guest").get(getGuestUsers);
 userRouter.route("/suggested-user").get(verifyJwt, getSuggestedUser);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
+
+userRouter.route("/searchList/add/:userId").patch(verifyJwt, addToSearchList);
+userRouter
+  .route("/searchList/remove/:userId")
+  .patch(verifyJwt, removeFromSearchList);
+userRouter.route("/searchList/clear").patch(verifyJwt, clearSearchList);
 
 userRouter.route("/liked-posts").get(verifyJwt, getLikedPost);
 userRouter.route("/:username").get(verifyJwt, getUserByUsername);

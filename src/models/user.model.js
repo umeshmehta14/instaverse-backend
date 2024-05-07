@@ -39,6 +39,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    searchList: [{ type: Schema.Types.ObjectId, ref: "User" }],
     refreshToken: {
       type: String,
     },

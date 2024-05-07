@@ -978,6 +978,86 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
     );
 });
 
+const addToSearchList = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId && !isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid UserId provided");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req?.user?._id,
+    { $addToSet: { searchList: userId } },
+    { new: true }
+  ).populate({
+    path: "searchList",
+    select: "_id username avatar.url fullName",
+  });
+
+  if (!user) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user?.searchList || [],
+        "Search list updated successfully"
+      )
+    );
+});
+
+const removeFromSearchList = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId || !isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid UserId provided");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { searchList: userId } },
+    { new: true }
+  ).populate({
+    path: "searchList",
+    select: "_id username avatar.url fullName",
+  });
+
+  if (!user) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user?.searchList || [],
+        "Search list updated successfully"
+      )
+    );
+});
+
+const clearSearchList = asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req?.user?._id,
+    { searchList: [] },
+    { new: true }
+  );
+
+  if (!user) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, user?.searchList, "Search list updated successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -998,4 +1078,7 @@ export {
   getLikedPost,
   getSuggestedUser,
   getUserByUsername,
+  addToSearchList,
+  removeFromSearchList,
+  clearSearchList,
 };
