@@ -11,6 +11,7 @@ import {
   getGuestUsers,
   getLikedPost,
   getSearchedUsers,
+  getSearchList,
   getSuggestedUser,
   getUserById,
   getUserByUsername,
@@ -51,6 +52,7 @@ userRouter.route("/guest").get(getGuestUsers);
 userRouter.route("/suggested-user").get(verifyJwt, getSuggestedUser);
 userRouter.route("/search").get(verifyJwt, getSearchedUsers);
 
+userRouter.route("/searchList").get(verifyJwt, getSearchList);
 userRouter.route("/searchList/add/:userId").patch(verifyJwt, addToSearchList);
 userRouter
   .route("/searchList/remove/:userId")

@@ -978,6 +978,26 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
     );
 });
 
+const getSearchList = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).populate({
+    path: "searchList",
+    select: "_id username avatar.url fullName",
+  });
+  if (!user) {
+    throw new ApiError(500, "Something went wrong");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user?.searchList || [],
+        "Search list fetched successfully"
+      )
+    );
+});
+
 const addToSearchList = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
@@ -1081,4 +1101,5 @@ export {
   addToSearchList,
   removeFromSearchList,
   clearSearchList,
+  getSearchList,
 };
