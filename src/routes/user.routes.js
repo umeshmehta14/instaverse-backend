@@ -39,8 +39,8 @@ userRouter
   .post(verifyJwt, upload.single("picture"), editUserProfile);
 
 userRouter.route("/bookmark").get(verifyJwt, getBookmark);
-userRouter.route("/bookmark/:postId").post(verifyJwt, addBookmark);
-userRouter.route("/bookmark/:postId").delete(verifyJwt, removeBookmark);
+userRouter.route("/bookmark/add/:postId").patch(verifyJwt, addBookmark);
+userRouter.route("/bookmark/remove/:postId").patch(verifyJwt, removeBookmark);
 
 userRouter.route("/follower/:userId").get(verifyJwt, getFollower);
 userRouter.route("/following/:userId").get(verifyJwt, getFollowing);
