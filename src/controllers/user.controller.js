@@ -217,6 +217,7 @@ const editUserProfile = asyncHandler(async (req, res) => {
   const { bio, avatar, fullName, portfolio } = req.body;
   const avatarLocalPath = req?.file?.path;
   let user;
+
   // if user choose a avatar
   if (avatar) {
     user = await User.findByIdAndUpdate(
@@ -600,6 +601,7 @@ const followUser = asyncHandler(async (req, res) => {
   if (!userId || !isValidObjectId(userId)) {
     throw new ApiError(404, "Invalid user id");
   }
+
   const followerId = req?.user?._id;
 
   const user = await User.findById(userId);
@@ -885,7 +887,7 @@ const getUserByUsername = asyncHandler(async (req, res) => {
         avatar: 1,
         bio: 1,
         portfolio: 1,
-        followers: 1,
+        follower: 1,
         following: 1,
         posts: 1,
         createdAt: 1,
