@@ -16,6 +16,10 @@ const postSchema = new Schema(
     publicId: {
       type: String,
     },
+    edit: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

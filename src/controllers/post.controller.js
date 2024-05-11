@@ -68,7 +68,7 @@ const editPost = asyncHandler(async (req, res) => {
 
   const updatedPost = await Posts.findByIdAndUpdate(
     postId,
-    { caption },
+    { caption, edit: true },
     { new: true }
   );
 
