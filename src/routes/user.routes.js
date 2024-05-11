@@ -22,6 +22,7 @@ import {
   removeBookmark,
   removeFollower,
   removeFromSearchList,
+  resetPassword,
   unfollowUser,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
@@ -31,6 +32,7 @@ const userRouter = new Router();
 
 userRouter.route("/sign-up").post(registerUser);
 userRouter.route("/log-in").post(loginUser);
+userRouter.route("/reset-password").post(resetPassword);
 userRouter.route("/logout").get(verifyJwt, logoutUser);
 userRouter.route("/refresh-token").post(refreshAccessToken);
 

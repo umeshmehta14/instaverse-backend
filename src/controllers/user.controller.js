@@ -76,6 +76,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
   });
+
   if (!user) {
     return res
       .status(400)
@@ -211,6 +212,42 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(401, error?.message || "Invalid refresh token");
   }
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !isValidEmail(email)) {
+    return res
+      .status(400)
+      .json(new ApiError(400, {}, "Email or username is required"));
+  }
+
+  if (!password) {
+    return res.status(400).json(new ApiError(400, {}, "Password is required"));
+  }
+
+  if (password?.length < 8) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(400, {}, "Password must contain atleast 8 characters")
+      );
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json(new ApiError(400, {}, "Invalid Email"));
+  }
+
+  user.password = password;
+
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
 const editUserProfile = asyncHandler(async (req, res) => {
@@ -1085,6 +1122,7 @@ export {
   loginUser,
   logoutUser,
   refreshAccessToken,
+  resetPassword,
   editUserProfile,
   getBookmark,
   addBookmark,
