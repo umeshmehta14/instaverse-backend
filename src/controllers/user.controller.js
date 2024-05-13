@@ -843,7 +843,10 @@ const getSearchedUsers = asyncHandler(async (req, res) => {
         ],
       },
     ],
-  }).select("username fullName avatar.url _id follower");
+  })
+    .select("username fullName avatar.url _id follower following")
+    .populate("follower", "username fullName  _id")
+    .populate("following", "username fullName  _id");
 
   return res
     .status(200)
