@@ -271,6 +271,12 @@ const editUserProfile = asyncHandler(async (req, res) => {
         .status(400)
         .json(new ApiError(400, {}, "Username already exists"));
     }
+
+    if (/\s/.test(username)) {
+      return res
+        .status(400)
+        .json(new ApiError(400, {}, "Username cannot contain spaces"));
+    }
   }
 
   let user;
