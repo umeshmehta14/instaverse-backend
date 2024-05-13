@@ -263,13 +263,16 @@ const editUserProfile = asyncHandler(async (req, res) => {
   const { bio, avatar, fullName, portfolio, username } = req.body;
   const avatarLocalPath = req?.file?.path;
 
-  const existingUsername = await User.findOne({ username });
+  if (username !== req.user?.username) {
+    const existingUsername = await User.findOne({ username });
 
-  if (existingUsername) {
-    return res
-      .status(400)
-      .json(new ApiError(400, {}, "Username already exists"));
+    if (existingUsername) {
+      return res
+        .status(400)
+        .json(new ApiError(400, {}, "Username already exists"));
+    }
   }
+
   let user;
 
   // if user choose a avatar
