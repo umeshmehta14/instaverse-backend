@@ -49,6 +49,12 @@ const registerUser = asyncHandler(async (req, res) => {
     return res.status(400).json(new ApiError(400, {}, "Invalid email address"));
   }
 
+  if (/\s/.test(username)) {
+    return res
+      .status(400)
+      .json(new ApiError(400, {}, "Username cannot contain spaces"));
+  }
+
   if (password?.length < 8) {
     return res
       .status(400)
@@ -109,6 +115,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler(async (req, res) => {
   const { identifier, password } = req.body;
+
+  console.log(identifier, password);
 
   if (!identifier) {
     return res
