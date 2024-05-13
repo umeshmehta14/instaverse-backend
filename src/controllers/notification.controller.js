@@ -47,9 +47,9 @@ const getUserNotification = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "comments",
-        localField: "post",
+        localField: "commentId",
         foreignField: "_id",
-        as: "post",
+        as: "commentId",
         pipeline: [
           {
             $project: {
