@@ -11,6 +11,7 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { isValidEmail } from "../utils/isValidEmail.js";
+import { Notification } from "../models/notification.model.js";
 
 const options = {
   httpOnly: true,
@@ -673,6 +674,16 @@ const followUser = asyncHandler(async (req, res) => {
     select: "_id username avatar.url following follower",
   });
 
+  const notification = await Notification.create({
+    userId: userId,
+    type: "follow",
+    actionBy: followerId,
+  });
+
+  if (!notification) {
+    throw new ApiError(500, "internal error");
+  }
+
   return res
     .status(200)
     .json(
@@ -716,6 +727,16 @@ const unfollowUser = asyncHandler(async (req, res) => {
     path: "following",
     select: "_id username avatar.url following follower",
   });
+
+  const notificationsToDelete = await Notification.findOneAndDelete({
+    userId: userId,
+    type: "follow",
+    actionBy: followerId,
+  });
+
+  if (!notificationsToDelete) {
+    throw new ApiError(500, "internal error");
+  }
 
   return res
     .status(200)

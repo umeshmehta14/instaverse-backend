@@ -20,4 +20,4 @@ const notificationSchema = new Schema(
   { timestamps: true }
 );
 
-export const notification = model("Notification", notificationSchema);
+export const Notification = model("Notification", notificationSchema);
