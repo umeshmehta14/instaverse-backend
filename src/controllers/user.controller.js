@@ -672,6 +672,42 @@ const getFollowing = asyncHandler(async (req, res) => {
         as: "following",
         pipeline: [
           {
+            $lookup: {
+              from: "users",
+              localField: "follower",
+              foreignField: "_id",
+              as: "follower",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    follower: 1,
+                    following: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "following",
+              foreignField: "_id",
+              as: "following",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    follower: 1,
+                    following: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
             $project: {
               _id: 1,
               "avatar.url": 1,
