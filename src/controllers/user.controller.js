@@ -1249,10 +1249,35 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
     _id: { $ne: currentUser._id },
     $and: [
       { _id: { $nin: currentUser.following } },
-      { _id: { $nin: currentUser.followers } },
-      { _id: { $in: currentUser.following } },
+      { _id: { $nin: currentUser.follower } },
     ],
-  }).limit(5);
+  })
+    .limit(5)
+    .populate({
+      path: "follower",
+      select: "_id username avatar.url following follower",
+      populate: {
+        path: "following",
+        select: "_id username avatar.url following follower",
+      },
+      populate: {
+        path: "follower",
+        select: "_id username avatar.url following follower",
+      },
+    })
+    .populate({
+      path: "following",
+      select: "_id username avatar.url following follower",
+      populate: {
+        path: "following",
+        select: "_id username avatar.url following follower",
+      },
+      populate: {
+        path: "follower",
+        select: "_id username avatar.url following follower",
+      },
+    })
+    .select("_id username avatar.url following follower");
 
   return res
     .status(200)
