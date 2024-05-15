@@ -116,8 +116,6 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { identifier, password } = req.body;
 
-  console.log(identifier, password);
-
   if (!identifier) {
     return res
       .status(400)
@@ -869,6 +867,14 @@ const removeFollower = asyncHandler(async (req, res) => {
   const populatedFollowingUser = await User.findById(followerId).populate({
     path: "follower",
     select: "_id username avatar.url following follower",
+    populate: {
+      path: "following",
+      select: "_id username avatar.url following follower",
+    },
+    populate: {
+      path: "follower",
+      select: "_id username avatar.url following follower",
+    },
   });
 
   return res
