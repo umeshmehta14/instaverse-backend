@@ -144,9 +144,93 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const loggedInUser = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "posts",
+        localField: "_id",
+        foreignField: "owner",
+        as: "posts",
+        pipeline: [
+          {
+            $lookup: {
+              from: "comments",
+              localField: "_id",
+              foreignField: "postId",
+              as: "comments",
+            },
+          },
+          {
+            $sort: {
+              createdAt: -1,
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              likes: 1,
+              url: 1,
+              comments: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "follower",
+        foreignField: "_id",
+        as: "follower",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "following",
+        foreignField: "_id",
+        as: "following",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        username: 1,
+        fullName: 1,
+        email: 1,
+        avatar: 1,
+        bio: 1,
+        portfolio: 1,
+        follower: 1,
+        following: 1,
+        posts: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
 
   return res
     .status(200)
