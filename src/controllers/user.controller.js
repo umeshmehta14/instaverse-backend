@@ -1247,10 +1247,7 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
 
   const suggestedUsers = await User.find({
     _id: { $ne: currentUser._id },
-    $or: [
-      { _id: { $nin: currentUser.following } },
-      { _id: { $in: currentUser.follower } },
-    ],
+    following: { $nin: currentUser.following },
   })
     .limit(5)
     .populate({
