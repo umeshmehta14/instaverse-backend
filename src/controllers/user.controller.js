@@ -1249,7 +1249,7 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
     _id: { $ne: currentUser._id },
     $and: [
       { _id: { $nin: currentUser.following } },
-      { _id: { $nin: currentUser.follower } },
+      { _id: { $in: currentUser.follower } },
     ],
   })
     .limit(5)
