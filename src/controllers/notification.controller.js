@@ -29,6 +29,11 @@ const getUserNotification = asyncHandler(async (req, res) => {
       },
     },
     {
+      $addFields: {
+        actionBy: { $arrayElemAt: ["$actionBy", 0] },
+      },
+    },
+    {
       $lookup: {
         from: "posts",
         localField: "post",
