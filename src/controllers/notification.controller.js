@@ -55,6 +55,11 @@ const getUserNotification = asyncHandler(async (req, res) => {
       },
     },
     {
+      $addFields: {
+        post: { $arrayElemAt: ["$post", 0] },
+      },
+    },
+    {
       $lookup: {
         from: "comments",
         localField: "commentId",

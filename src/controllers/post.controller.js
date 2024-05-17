@@ -8,6 +8,7 @@ import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { Notification } from "../models/notification.model.js";
 
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
@@ -290,6 +291,17 @@ const addLike = asyncHandler(async (req, res) => {
 
   await likedPost.save();
 
+  const notification = await Notification.create({
+    userId: likedPost?.owner,
+    type: "like",
+    actionBy: req?.user?._id,
+    post: postId,
+  });
+
+  if (!notification) {
+    throw new ApiError(500, "internal error");
+  }
+
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "post liked successfully"));
@@ -306,6 +318,17 @@ const removeLike = asyncHandler(async (req, res) => {
   const indexOfUser = likedPost.likes.indexOf(req.user?._id);
   likedPost.likes.splice(indexOfUser, 1);
   await likedPost.save();
+
+  const notificationsToDelete = await Notification.findOneAndDelete({
+    userId: likedPost?.owner,
+    type: "like",
+    actionBy: req?.user?._id,
+    post: postId,
+  });
+
+  if (!notificationsToDelete) {
+    throw new ApiError(500, "internal error");
+  }
 
   return res
     .status(200)
