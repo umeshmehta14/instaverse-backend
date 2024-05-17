@@ -1287,10 +1287,12 @@ const getSuggestedUser = asyncHandler(async (req, res) => {
 });
 
 const getSearchList = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user?._id).populate({
-    path: "searchList",
-    select: "_id username avatar.url fullName",
-  });
+  const user = await User.findById(req.user?._id)
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "searchList",
+      select: "_id username avatar.url fullName",
+    });
   if (!user) {
     throw new ApiError(500, "Something went wrong");
   }
