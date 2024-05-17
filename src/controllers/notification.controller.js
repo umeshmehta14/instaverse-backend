@@ -12,6 +12,11 @@ const getUserNotification = asyncHandler(async (req, res) => {
       },
     },
     {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+    {
       $lookup: {
         from: "users",
         localField: "actionBy",
