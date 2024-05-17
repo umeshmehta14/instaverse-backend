@@ -1319,10 +1319,12 @@ const addToSearchList = asyncHandler(async (req, res) => {
     req?.user?._id,
     { $addToSet: { searchList: userId } },
     { new: true }
-  ).populate({
-    path: "searchList",
-    select: "_id username avatar.url fullName",
-  });
+  )
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "searchList",
+      select: "_id username avatar.url fullName",
+    });
 
   if (!user) {
     throw new ApiError(500, "Something went wrong");
@@ -1350,10 +1352,12 @@ const removeFromSearchList = asyncHandler(async (req, res) => {
     req.user._id,
     { $pull: { searchList: userId } },
     { new: true }
-  ).populate({
-    path: "searchList",
-    select: "_id username avatar.url fullName",
-  });
+  )
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "searchList",
+      select: "_id username avatar.url fullName",
+    });
 
   if (!user) {
     throw new ApiError(500, "Something went wrong");
