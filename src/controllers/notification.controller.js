@@ -34,11 +34,6 @@ const getUserNotification = asyncHandler(async (req, res) => {
       },
     },
     {
-      $addFields: {
-        actionBy: { $arrayElemAt: ["$actionBy", 0] },
-      },
-    },
-    {
       $lookup: {
         from: "posts",
         localField: "post",
@@ -55,24 +50,26 @@ const getUserNotification = asyncHandler(async (req, res) => {
       },
     },
     {
-      $addFields: {
-        post: { $arrayElemAt: ["$post", 0] },
-      },
-    },
-    {
       $lookup: {
         from: "comments",
-        localField: "commentId",
+        localField: "comment",
         foreignField: "_id",
-        as: "commentId",
+        as: "comment",
         pipeline: [
           {
             $project: {
               _id: 1,
-              url: 1,
+              text: 1,
             },
           },
         ],
+      },
+    },
+    {
+      $addFields: {
+        comment: { $arrayElemAt: ["$comment", 0] },
+        post: { $arrayElemAt: ["$post", 0] },
+        actionBy: { $arrayElemAt: ["$actionBy", 0] },
       },
     },
   ]);

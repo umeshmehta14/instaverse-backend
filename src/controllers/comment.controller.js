@@ -3,6 +3,8 @@ import { Comment } from "../models/comment.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+import { Notification } from "../models/notification.model.js";
+import { Posts } from "../models/posts.model.js";
 
 const getPostComments = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -43,6 +45,21 @@ const addComment = asyncHandler(async (req, res) => {
   if (!comment) {
     throw new ApiError(400, "Something went wrong while creating comment");
   }
+
+  const post = await Posts.findById(postId);
+
+  const notification = await Notification.create({
+    userId: post?.owner,
+    type: "comment",
+    actionBy: req?.user?._id,
+    post: postId,
+    comment: comment?._id,
+  });
+
+  if (!notification) {
+    throw new ApiError(500, "internal error");
+  }
+
   return res
     .status(201)
     .json(new ApiResponse(201, {}, "Comment created successfully"));
@@ -55,11 +72,23 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid post id");
   }
 
+  const comment = await Comment.findById(commentId);
+  const post = await Posts.findById(comment?.postId);
+
   const deletedComment = await Comment.findByIdAndDelete(commentId);
 
   if (!deletedComment) {
     throw new ApiError(500, "Something went wrong while deleting comment");
   }
+
+  await Notification.findOneAndDelete({
+    userId: post?.owner,
+    type: "comment",
+    actionBy: req?.user?._id,
+    post: post?._id,
+    comment: commentId,
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Comment deleted successfully"));

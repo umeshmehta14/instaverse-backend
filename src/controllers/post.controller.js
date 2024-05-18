@@ -319,16 +319,12 @@ const removeLike = asyncHandler(async (req, res) => {
   likedPost.likes.splice(indexOfUser, 1);
   await likedPost.save();
 
-  const notificationsToDelete = await Notification.findOneAndDelete({
+  await Notification.findOneAndDelete({
     userId: likedPost?.owner,
     type: "like",
     actionBy: req?.user?._id,
     post: postId,
   });
-
-  if (!notificationsToDelete) {
-    throw new ApiError(500, "internal error");
-  }
 
   return res
     .status(200)

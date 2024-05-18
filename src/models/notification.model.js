@@ -7,14 +7,18 @@ const notificationSchema = new Schema(
       ref: "User",
       required: true,
     },
-    type: { type: String, enum: ["like", "comment", "follow"], required: true },
+    type: {
+      type: String,
+      enum: ["like", "comment", "follow", "commentLike"],
+      required: true,
+    },
     actionBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
     post: { type: Schema.Types.ObjectId, ref: "Post" },
-    commentId: { type: Schema.Types.ObjectId, ref: "Comment" },
+    comment: { type: Schema.Types.ObjectId, ref: "Comment" },
     read: { type: Boolean, default: false },
   },
   { timestamps: true }
