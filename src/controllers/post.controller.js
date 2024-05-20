@@ -291,15 +291,17 @@ const addLike = asyncHandler(async (req, res) => {
 
   await likedPost.save();
 
-  const notification = await Notification.create({
-    userId: likedPost?.owner,
-    type: "like",
-    actionBy: req?.user?._id,
-    post: postId,
-  });
+  if (!likedPost?.owner.equals(req.user._id)) {
+    const notification = await Notification.create({
+      userId: likedPost?.owner,
+      type: "like",
+      actionBy: req?.user?._id,
+      post: postId,
+    });
 
-  if (!notification) {
-    throw new ApiError(500, "internal error");
+    if (!notification) {
+      throw new ApiError(500, "internal error");
+    }
   }
 
   return res

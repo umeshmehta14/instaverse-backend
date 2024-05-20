@@ -48,16 +48,18 @@ const addComment = asyncHandler(async (req, res) => {
 
   const post = await Posts.findById(postId);
 
-  const notification = await Notification.create({
-    userId: post?.owner,
-    type: "comment",
-    actionBy: req?.user?._id,
-    post: postId,
-    comment: comment?._id,
-  });
+  if (!post?.owner.equals(req.user._id)) {
+    const notification = await Notification.create({
+      userId: post?.owner,
+      type: "comment",
+      actionBy: req?.user?._id,
+      post: postId,
+      comment: comment?._id,
+    });
 
-  if (!notification) {
-    throw new ApiError(500, "internal error");
+    if (!notification) {
+      throw new ApiError(500, "internal error");
+    }
   }
 
   return res
@@ -129,6 +131,20 @@ const addLikeToComment = asyncHandler(async (req, res) => {
     { new: true }
   );
 
+  if (!updatedComment?.user.equals(req.user._id)) {
+    const notification = await Notification.create({
+      userId: updatedComment?.user,
+      type: "commentLike",
+      actionBy: req?.user?._id,
+      post: updatedComment?.postId,
+      comment: updatedComment?._id,
+    });
+
+    if (!notification) {
+      throw new ApiError(500, "internal error");
+    }
+  }
+
   if (!updatedComment) {
     throw new ApiError(400, "Something went wrong while liking comment");
   }
@@ -150,6 +166,14 @@ const removeLikeFromComment = asyncHandler(async (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true }
   );
+
+  await Notification.findOneAndDelete({
+    userId: updatedComment?.user,
+    type: "commentLike",
+    actionBy: req?.user?._id,
+    post: updatedComment?.postId,
+    comment: updatedComment?._id,
+  });
 
   if (!updatedComment) {
     throw new ApiError(
