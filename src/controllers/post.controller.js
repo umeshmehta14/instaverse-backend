@@ -238,6 +238,11 @@ const getHomePosts = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
+        owner: { $arrayElemAt: ["$owner", 0] },
+      },
+    },
+    {
+      $addFields: {
         totalComments: { $size: "$comments" },
       },
     },
