@@ -84,7 +84,7 @@ const editPost = asyncHandler(async (req, res) => {
 
 const getAllPost = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const perPage = 5;
+  const perPage = 12;
 
   const skip = (page - 1) * perPage;
 
@@ -99,50 +99,6 @@ const getAllPost = asyncHandler(async (req, res) => {
         foreignField: "postId",
         as: "comments",
       },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              username: 1,
-              "avatar.url": 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        foreignField: "_id",
-        localField: "likes",
-        as: "likes",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              follower: 1,
-              username: 1,
-              following: 1,
-              "avatar.url": 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $addFields: {
-        totalComments: { $size: "$comments" },
-      },
-    },
-    {
-      $unset: "comments",
     },
     {
       $sort: { createdAt: -1 },
