@@ -15,16 +15,24 @@ const UploadPost = asyncHandler(async (req, res) => {
   const postLocalPath = req?.file?.path;
 
   if (!postLocalPath) {
-    throw new ApiError(400, "Post file is missing");
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Please select a picture"));
   }
   if (!caption) {
-    throw new ApiError(400, "Caption is missing");
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Please write caption for your post"));
   }
 
   const uploadedPost = await uploadOnCloudinary(postLocalPath, postFolder);
 
   if (!uploadedPost?.url) {
-    throw new ApiError(400, "something went wrong while uploading post");
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(400, {}, "something went wrong while uploading post")
+      );
   }
 
   const post = await Posts.create({
