@@ -119,19 +119,20 @@ const UploadPost = asyncHandler(async (req, res) => {
 
 const deletePost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  // const { publicId } = req.body;
+
   if (!postId) {
     throw new ApiError(400, "post is required");
   }
 
-  const publicId = await Posts.findById(postId).publicId;
+  const post = await Posts.findById(postId);
+
   const deletedPost = await Posts.findByIdAndDelete({ _id: postId });
   if (!deletedPost) {
     throw new ApiError(400, "Something went wrong while deleting post");
   }
 
-  if (publicId) {
-    await deleteFromCloudinary(publicId, postFolder);
+  if (post?.publicId) {
+    await deleteFromCloudinary(post?.publicId, postFolder);
   }
   return res
     .status(200)
