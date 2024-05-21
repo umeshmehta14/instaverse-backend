@@ -114,7 +114,7 @@ const UploadPost = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, post, "post uploaded successfully"));
+    .json(new ApiResponse(200, post[0], "post uploaded successfully"));
 });
 
 const deletePost = asyncHandler(async (req, res) => {
