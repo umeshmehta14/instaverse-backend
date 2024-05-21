@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, Types } from "mongoose";
 import { postFolder } from "../constants.js";
 import { Posts } from "../models/posts.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -19,6 +19,7 @@ const UploadPost = asyncHandler(async (req, res) => {
       .status(400)
       .json(new ApiResponse(400, {}, "Please select a picture"));
   }
+
   if (!caption) {
     return res
       .status(400)
@@ -35,12 +36,77 @@ const UploadPost = asyncHandler(async (req, res) => {
       );
   }
 
-  const post = await Posts.create({
+  const createdPost = await Posts.create({
     url: uploadedPost?.url,
     owner: req?.user?._id,
     caption,
     publicId: uploadedPost?.public_id,
   });
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(createdPost._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: { $arrayElemAt: ["$owner", 0] },
+      },
+    },
+    {
+      $addFields: {
+        totalComments: { $size: "$comments" },
+      },
+    },
+    {
+      $unset: "comments",
+    },
+  ]);
 
   if (!post) {
     throw new ApiError(401, "something went wrong while uploading post");
