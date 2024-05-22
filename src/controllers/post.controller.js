@@ -321,16 +321,45 @@ const addLike = asyncHandler(async (req, res) => {
   if (!isValidObjectId(postId)) {
     throw new ApiError(400, "Invalid post id");
   }
+  const userId = req.user._id;
 
-  const likedPost = await Posts.findById(postId);
+  const likedPost = await Posts.findByIdAndUpdate(
+    postId,
+    { $addToSet: { likes: userId } },
+    { new: true }
+  );
 
   if (!likedPost) {
     throw new ApiError(400, "Post not found");
   }
 
-  likedPost.likes.unshift(req.user?._id);
-
-  await likedPost.save();
+  const likes = await Posts.aggregate([
+    { $match: { _id: new Types.ObjectId(postId) } },
+    {
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        likes: 1,
+      },
+    },
+  ]);
 
   if (!likedPost?.owner.equals(req.user._id)) {
     const notification = await Notification.create({
@@ -347,7 +376,7 @@ const addLike = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "post liked successfully"));
+    .json(new ApiResponse(200, likes, "post liked successfully"));
 });
 
 const removeLike = asyncHandler(async (req, res) => {
@@ -356,11 +385,45 @@ const removeLike = asyncHandler(async (req, res) => {
   if (!isValidObjectId(postId)) {
     throw new ApiError(400, "Invalid post id");
   }
-  const likedPost = await Posts.findById(postId);
+  const userId = req.user._id;
 
-  const indexOfUser = likedPost.likes.indexOf(req.user?._id);
-  likedPost.likes.splice(indexOfUser, 1);
-  await likedPost.save();
+  const likedPost = await Posts.findByIdAndUpdate(
+    postId,
+    { $pull: { likes: userId } },
+    { new: true }
+  );
+
+  if (!likedPost) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  const likes = await Posts.aggregate([
+    { $match: { _id: new Types.ObjectId(postId) } },
+    {
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        likes: 1,
+      },
+    },
+  ]);
 
   await Notification.findOneAndDelete({
     userId: likedPost?.owner,
@@ -371,7 +434,7 @@ const removeLike = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Like removed successfully"));
+    .json(new ApiResponse(200, likes, "Like removed successfully"));
 });
 
 const getLikedUsers = asyncHandler(async (req, res) => {
