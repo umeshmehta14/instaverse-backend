@@ -464,6 +464,7 @@ const editUserProfile = asyncHandler(async (req, res) => {
               bio,
               fullName,
               portfolio,
+              username,
             },
           },
           {
