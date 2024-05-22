@@ -968,6 +968,10 @@ const removeFollower = asyncHandler(async (req, res) => {
     actionBy: userId,
   });
 
+  if (!notificationsToDelete) {
+    throw new ApiError(500, "internal error");
+  }
+
   return res
     .status(200)
     .json(
