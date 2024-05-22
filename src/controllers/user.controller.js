@@ -901,9 +901,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
   });
 
   const notificationsToDelete = await Notification.findOneAndDelete({
-    userId: followerId,
+    userId: userId,
     type: "follow",
-    actionBy: userId,
+    actionBy: followerId,
   });
 
   if (!notificationsToDelete) {
