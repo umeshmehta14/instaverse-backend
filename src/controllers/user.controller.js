@@ -901,9 +901,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
   });
 
   const notificationsToDelete = await Notification.findOneAndDelete({
-    userId: userId,
+    userId: followerId,
     type: "follow",
-    actionBy: followerId,
+    actionBy: userId,
   });
 
   if (!notificationsToDelete) {
@@ -960,6 +960,12 @@ const removeFollower = asyncHandler(async (req, res) => {
       path: "follower",
       select: "_id username avatar.url following follower",
     },
+  });
+
+  const notificationsToDelete = await Notification.findOneAndDelete({
+    userId: followerId,
+    type: "follow",
+    actionBy: userId,
   });
 
   return res
