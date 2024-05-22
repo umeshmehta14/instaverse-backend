@@ -376,7 +376,7 @@ const addLike = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, likes, "post liked successfully"));
+    .json(new ApiResponse(200, likes[0].likes, "post liked successfully"));
 });
 
 const removeLike = asyncHandler(async (req, res) => {
@@ -434,7 +434,7 @@ const removeLike = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, likes, "Like removed successfully"));
+    .json(new ApiResponse(200, likes[0].likes, "Like removed successfully"));
 });
 
 const getLikedUsers = asyncHandler(async (req, res) => {
