@@ -540,7 +540,7 @@ const addBookmark = asyncHandler(async (req, res) => {
   const userId = req?.user?._id;
   const updatedUser = await User.findOneAndUpdate(
     { _id: userId },
-    { $addToSet: { bookmarks: postId } },
+    { $push: { bookmarks: { $each: [postId], $position: 0 } } },
     { new: true }
   );
 
