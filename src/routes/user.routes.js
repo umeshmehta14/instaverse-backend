@@ -23,7 +23,9 @@ import {
   removeFollower,
   removeFromSearchList,
   resetPassword,
+  sendOtp,
   unfollowUser,
+  verifyOtp,
 } from "../controllers/user.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -33,6 +35,8 @@ const userRouter = new Router();
 userRouter.route("/sign-up").post(registerUser);
 userRouter.route("/log-in").post(loginUser);
 userRouter.route("/reset-password").post(resetPassword);
+userRouter.route("/send-otp").post(sendOtp);
+userRouter.route("/verify-otp").post(verifyOtp);
 userRouter.route("/logout").get(verifyJwt, logoutUser);
 userRouter.route("/refresh-token").post(refreshAccessToken);
 

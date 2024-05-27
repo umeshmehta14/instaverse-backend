@@ -1,5 +1,8 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
 
 import { profileFolder } from "../constants.js";
 import { User } from "../models/user.model.js";
@@ -17,6 +20,8 @@ const options = {
   httpOnly: true,
   secure: true,
 };
+
+const otpStore = {};
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -305,13 +310,87 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
+const sendOtp = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const otp = crypto.randomInt(1000, 9999).toString();
+  const otpExpirationTime = Date.now() + 10 * 60 * 1000;
+
+  otpStore[email] = { otp, expiresAt: otpExpirationTime };
+
+  var transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: { rejectUnauthorized: false },
+  });
+
+  var mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "OTP from instaverse",
+    text: `Your OTP is ${otp}. It is valid for 10 minutes. Please do not share this OTP with anyone for security reasons.`,
+  };
+
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      res.status(500).json(new ApiResponse(500, {}, "Failed to send email"));
+    } else {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "otp sent successfully"));
+    }
+  });
+});
+
+const verifyOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    throw new ApiError(400, "Email and OTP are required");
+  }
+
+  const storedOtpData = otpStore[email];
+
+  if (!storedOtpData) {
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(400, {}, "OTP not found. Please request a new OTP.")
+      );
+  }
+
+  const { otp: storedOtp, expiresAt } = storedOtpData;
+
+  if (Date.now() > expiresAt) {
+    delete otpStore[email];
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(400, {}, "OTP has expired. Please request a new OTP.")
+      );
+  }
+
+  if (otp !== storedOtp) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Invalid OTP. Please try again."));
+  }
+
+  delete otpStore[email];
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "OTP verified successfully"));
+});
+
 const resetPassword = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !isValidEmail(email)) {
-    return res
-      .status(400)
-      .json(new ApiError(400, {}, "Email or username is required"));
+    return res.status(400).json(new ApiError(400, {}, "Email is required"));
   }
 
   if (!password) {
@@ -330,6 +409,20 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   if (!user) {
     return res.status(400).json(new ApiError(400, {}, "Invalid Email"));
+  }
+
+  const isSamePassword = await bcrypt.compare(password, user.password);
+
+  if (isSamePassword) {
+    return res
+      .status(400)
+      .json(
+        new ApiError(
+          400,
+          {},
+          "New password must be different from the old password"
+        )
+      );
   }
 
   user.password = password;
@@ -1428,4 +1521,6 @@ export {
   removeFromSearchList,
   clearSearchList,
   getSearchList,
+  sendOtp,
+  verifyOtp,
 };
