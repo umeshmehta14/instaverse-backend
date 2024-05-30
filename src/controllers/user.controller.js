@@ -44,50 +44,6 @@ const generateAccessAndRefreshToken = async (userId) => {
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, username, password, email } = req.body;
 
-  if (
-    !(username?.trim() || fullName?.trim() || password?.trim() || email?.trim())
-  ) {
-    return res.status(400).json(new ApiError(400, {}, "Invalid credentials"));
-  }
-
-  if (!isValidEmail(email)) {
-    return res.status(400).json(new ApiError(400, {}, "Invalid email address"));
-  }
-
-  if (/\s/.test(username)) {
-    return res
-      .status(400)
-      .json(
-        new ApiError(
-          400,
-          {},
-          "Usernames can only use letters, numbers, underscores and periods."
-        )
-      );
-  }
-
-  if (password?.length < 8) {
-    return res
-      .status(400)
-      .json(
-        new ApiError(400, {}, "Password must contain atleast 8 characters")
-      );
-  }
-
-  const existingUsername = await User.findOne({ username });
-  if (existingUsername) {
-    return res
-      .status(400)
-      .json(new ApiError(400, {}, "Username already exists"));
-  }
-
-  const existingEmail = await User.findOne({ email });
-  if (existingEmail) {
-    return res
-      .status(400)
-      .json(new ApiError(400, {}, "Email address already exists"));
-  }
-
   const user = await User.create({
     fullName,
     username,
