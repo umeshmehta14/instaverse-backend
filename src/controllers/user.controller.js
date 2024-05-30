@@ -57,7 +57,13 @@ const registerUser = asyncHandler(async (req, res) => {
   if (/\s/.test(username)) {
     return res
       .status(400)
-      .json(new ApiError(400, {}, "Username cannot contain spaces"));
+      .json(
+        new ApiError(
+          400,
+          {},
+          "Usernames can only use letters, numbers, underscores and periods."
+        )
+      );
   }
 
   if (password?.length < 8) {
@@ -116,6 +122,51 @@ const registerUser = asyncHandler(async (req, res) => {
         "user created successfully"
       )
     );
+});
+
+const validateUserDetails = asyncHandler(async (req, res) => {
+  const { username, password, email } = req.body;
+
+  const validationResults = {
+    username: false,
+    password: false,
+    email: false,
+    text: "",
+  };
+
+  if (isValidEmail(email)) {
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      validationResults.text = "Email address already exists";
+    } else {
+      validationResults.email = true;
+    }
+  } else {
+    validationResults.text = "Enter a valid email address.";
+  }
+
+  if (password?.length >= 8) {
+    validationResults.password = true;
+  }
+
+  if (username) {
+    if (/\s/.test(username)) {
+      validationResults.text =
+        "Usernames can only use letters, numbers, underscores and periods.";
+    } else {
+      const existingUsername = await User.findOne({ username });
+      if (existingUsername) {
+        validationResults.text =
+          "This username isn't available. Please try another.";
+      } else {
+        validationResults.username = true;
+      }
+    }
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, validationResults, "Validated successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -1500,6 +1551,7 @@ export {
   registerUser,
   loginUser,
   logoutUser,
+  validateUserDetails,
   refreshAccessToken,
   resetPassword,
   editUserProfile,
