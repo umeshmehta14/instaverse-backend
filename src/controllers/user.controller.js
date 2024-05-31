@@ -90,6 +90,8 @@ const validateUserDetails = asyncHandler(async (req, res) => {
     text: "",
   };
 
+  const usernamePattern = /^[a-zA-Z0-9._]+$/;
+
   if (isValidEmail(email)) {
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
@@ -106,7 +108,7 @@ const validateUserDetails = asyncHandler(async (req, res) => {
   }
 
   if (username) {
-    if (/\s/.test(username)) {
+    if (!usernamePattern.test(username)) {
       validationResults.text =
         "Usernames can only use letters, numbers, underscores and periods.";
     } else {
