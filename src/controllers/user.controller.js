@@ -321,7 +321,7 @@ const sendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   const otp = crypto.randomInt(1000, 9999).toString();
-  const otpExpirationTime = Date.now() + 10 * 60 * 1000;
+  const otpExpirationTime = Date.now() + 5 * 60 * 1000;
 
   otpStore[email] = { otp, expiresAt: otpExpirationTime };
 
@@ -338,7 +338,7 @@ const sendOtp = asyncHandler(async (req, res) => {
     from: process.env.EMAIL,
     to: email,
     subject: "OTP from instaverse",
-    text: `Your OTP is ${otp}. It is valid for 10 minutes. Please do not share this OTP with anyone for security reasons.`,
+    html: `<p>Your OTP is <strong style="font-size: 1.2em; color: #007bff;">${otp}</strong>. It is valid for 5 minutes. Please do not share this OTP with anyone for security reasons.</p>`,
   };
 
   transporter.sendMail(mailOptions, function (error, info) {
