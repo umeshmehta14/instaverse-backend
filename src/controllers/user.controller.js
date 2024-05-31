@@ -367,7 +367,11 @@ const verifyOtp = asyncHandler(async (req, res) => {
     return res
       .status(400)
       .json(
-        new ApiResponse(400, {}, "OTP not found. Please request a new OTP.")
+        new ApiResponse(
+          400,
+          {},
+          "That code isn't valid. You can request a new one."
+        )
       );
   }
 
@@ -378,14 +382,24 @@ const verifyOtp = asyncHandler(async (req, res) => {
     return res
       .status(400)
       .json(
-        new ApiResponse(400, {}, "OTP has expired. Please request a new OTP.")
+        new ApiResponse(
+          400,
+          {},
+          "That code isn't valid. You can request a new one."
+        )
       );
   }
 
   if (otp !== storedOtp) {
     return res
       .status(400)
-      .json(new ApiResponse(400, {}, "Invalid OTP. Please try again."));
+      .json(
+        new ApiResponse(
+          400,
+          {},
+          "That code isn't valid. You can request a new one."
+        )
+      );
   }
 
   delete otpStore[email];
