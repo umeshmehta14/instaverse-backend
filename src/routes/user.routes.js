@@ -39,8 +39,9 @@ userRouter.route("/reset-password").post(resetPassword);
 userRouter.route("/check-availablity").post(validateUserDetails);
 userRouter.route("/send-otp").post(sendOtp);
 userRouter.route("/verify-otp").post(verifyOtp);
-userRouter.route("/logout").get(verifyJwt, logoutUser);
 userRouter.route("/refresh-token").post(refreshAccessToken);
+
+userRouter.route("/logout").get(verifyJwt, logoutUser);
 
 userRouter
   .route("/update-profile")

@@ -93,7 +93,7 @@ const validateUserDetails = asyncHandler(async (req, res) => {
   if (isValidEmail(email)) {
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
-      validationResults.text = "Email address already exists";
+      validationResults.text = "Another account is using the same email.";
     } else {
       validationResults.email = true;
     }
