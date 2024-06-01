@@ -321,7 +321,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const sendOtp = asyncHandler(async (req, res) => {
   let { email, login, identifier } = req.body;
-
   if (login) {
     let user;
 
@@ -377,7 +376,22 @@ const sendOtp = asyncHandler(async (req, res) => {
 });
 
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
+  let { email, otp, login, identifier } = req.body;
+
+  if (login) {
+    let user;
+
+    if (isValidEmail(identifier)) {
+      user = await User.findOne({ email: identifier });
+    } else {
+      user = await User.findOne({ username: identifier });
+    }
+
+    if (!user) {
+      return res.status(400).json(new ApiResponse(400, {}, "User not found"));
+    }
+    email = user.email;
+  }
 
   if (!email || !otp) {
     throw new ApiError(400, "Email and OTP are required");
