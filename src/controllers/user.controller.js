@@ -23,6 +23,7 @@ const options = {
 };
 
 const otpStore = {};
+const usernamePattern = /^[a-zA-Z0-9._]+$/;
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -90,8 +91,6 @@ const validateUserDetails = asyncHandler(async (req, res) => {
     email: false,
     text: "",
   };
-
-  const usernamePattern = /^[a-zA-Z0-9._]+$/;
 
   if (isValidEmail(email)) {
     const existingEmail = await User.findOne({ email });
@@ -493,10 +492,16 @@ const editUserProfile = asyncHandler(async (req, res) => {
         .json(new ApiError(400, {}, "Username already exists"));
     }
 
-    if (/\s/.test(username)) {
+    if (!usernamePattern.test(username)) {
       return res
         .status(400)
-        .json(new ApiError(400, {}, "Username cannot contain spaces"));
+        .json(
+          new ApiError(
+            400,
+            {},
+            "Usernames can only use letters, numbers, underscores and periods."
+          )
+        );
     }
   }
 
