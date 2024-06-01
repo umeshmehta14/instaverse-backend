@@ -15,6 +15,7 @@ import {
 } from "../utils/cloudinary.js";
 import { isValidEmail } from "../utils/isValidEmail.js";
 import { Notification } from "../models/notification.model.js";
+import { maskEmail } from "../utils/utils.js";
 
 const options = {
   httpOnly: true,
@@ -320,7 +321,22 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const sendOtp = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  let { email, login, identifier } = req.body;
+
+  if (login) {
+    let user;
+
+    if (isValidEmail(identifier)) {
+      user = await User.findOne({ email: identifier });
+    } else {
+      user = await User.findOne({ username: identifier });
+    }
+
+    if (!user) {
+      return res.status(400).json(new ApiError(400, {}, "User not found"));
+    }
+    email = user.email;
+  }
 
   const otp = crypto.randomInt(1000, 9999).toString();
   const otpExpirationTime = Date.now() + 5 * 60 * 1000;
@@ -343,13 +359,20 @@ const sendOtp = asyncHandler(async (req, res) => {
     html: `<p>Your OTP is <strong style="font-size: 1.2em; color: #007bff;">${otp}</strong>. It is valid for 5 minutes. Please do not share this OTP with anyone for security reasons.</p>`,
   };
 
-  transporter.sendMail(mailOptions, function (error, info) {
+  transporter.sendMail(mailOptions, function (error) {
     if (error) {
       res.status(500).json(new ApiResponse(500, {}, "Failed to send email"));
     } else {
+      const maskedEmail = maskEmail(email);
       return res
         .status(200)
-        .json(new ApiResponse(200, {}, "otp sent successfully"));
+        .json(
+          new ApiResponse(
+            200,
+            login ? { email: maskedEmail } : {},
+            "otp sent successfully"
+          )
+        );
     }
   });
 });
