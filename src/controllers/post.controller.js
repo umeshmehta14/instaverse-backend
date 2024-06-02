@@ -496,7 +496,7 @@ const getPostById = asyncHandler(async (req, res) => {
   const post = await Posts.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(postId),
+        _id: new Types.ObjectId(postId),
       },
     },
     {
@@ -544,6 +544,11 @@ const getPostById = asyncHandler(async (req, res) => {
         ],
       },
     },
+    {
+      $addFields: {
+        owner: { $arrayElemAt: ["$owner", 0] },
+      },
+    },
   ]);
 
   if (!post) {
@@ -552,7 +557,7 @@ const getPostById = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, post, "post found successfully"));
+    .json(new ApiResponse(200, post[0], "post found successfully"));
 });
 
 export {
