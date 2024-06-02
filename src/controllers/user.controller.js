@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import zxcvbn from "zxcvbn";
 
 import { profileFolder } from "../constants.js";
 import { User } from "../models/user.model.js";
@@ -103,8 +104,14 @@ const validateUserDetails = asyncHandler(async (req, res) => {
     validationResults.text = "Enter a valid email address.";
   }
 
-  if (password?.length >= 8) {
-    validationResults.password = true;
+  if (password) {
+    const passwordStrength = zxcvbn(password);
+    if (passwordStrength.score < 3) {
+      validationResults.text =
+        "This password is too easy to guess. Please create a new one.";
+    } else if (password?.length >= 8) {
+      validationResults.password = true;
+    }
   }
 
   if (username) {
@@ -321,6 +328,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const sendOtp = asyncHandler(async (req, res) => {
   let { email, login, identifier } = req.body;
+
   if (login) {
     let user;
 
@@ -446,28 +454,43 @@ const verifyOtp = asyncHandler(async (req, res) => {
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body;
 
-  if (!email || !isValidEmail(email)) {
-    return res.status(400).json(new ApiError(400, {}, "Email is required"));
+  let user;
+
+  if (isValidEmail(identifier)) {
+    user = await User.findOne({ email: identifier });
+  } else {
+    user = await User.findOne({ username: identifier });
+  }
+
+  if (!user) {
+    return res.status(400).json(new ApiResponse(400, {}, "User not found"));
   }
 
   if (!password) {
     return res.status(400).json(new ApiError(400, {}, "Password is required"));
   }
 
-  if (password?.length < 8) {
-    return res
-      .status(400)
-      .json(
-        new ApiError(400, {}, "Password must contain atleast 8 characters")
-      );
-  }
-
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.status(400).json(new ApiError(400, {}, "Invalid Email"));
+  if (password) {
+    const passwordStrength = zxcvbn(password);
+    if (passwordStrength.score < 3) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            {},
+            "This password is too easy to guess. Please create a new one."
+          )
+        );
+    } else if (password?.length >= 8) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(400, {}, "Password must contain atleast 8 characters")
+        );
+    }
   }
 
   const isSamePassword = await bcrypt.compare(password, user.password);
@@ -476,7 +499,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     return res
       .status(400)
       .json(
-        new ApiError(
+        new ApiResponse(
           400,
           {},
           "New password must be different from the old password"
