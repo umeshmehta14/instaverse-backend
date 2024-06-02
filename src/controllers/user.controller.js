@@ -484,7 +484,7 @@ const resetPassword = asyncHandler(async (req, res) => {
             "This password is too easy to guess. Please create a new one."
           )
         );
-    } else if (password?.length >= 8) {
+    } else if (password?.length < 8) {
       return res
         .status(400)
         .json(
