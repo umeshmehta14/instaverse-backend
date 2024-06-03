@@ -524,6 +524,11 @@ const getPostById = asyncHandler(async (req, res) => {
               ],
             },
           },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
         ],
       },
     },
