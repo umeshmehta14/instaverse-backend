@@ -535,6 +535,25 @@ const getPostById = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "users",
+        foreignField: "_id",
+        localField: "likes",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              follower: 1,
+              username: 1,
+              following: 1,
+              "avatar.url": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
         localField: "owner",
         foreignField: "_id",
         as: "owner",
