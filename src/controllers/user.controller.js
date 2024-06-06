@@ -296,18 +296,105 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    const user = await User.findById(decodedToken?._id);
+    const user = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(decodedToken?._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "posts",
+          localField: "_id",
+          foreignField: "owner",
+          as: "posts",
+          pipeline: [
+            {
+              $lookup: {
+                from: "comments",
+                localField: "_id",
+                foreignField: "postId",
+                as: "comments",
+              },
+            },
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                likes: 1,
+                url: 1,
+                comments: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "follower",
+          foreignField: "_id",
+          as: "follower",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                username: 1,
+                "avatar.url": 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "following",
+          foreignField: "_id",
+          as: "following",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                username: 1,
+                "avatar.url": 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          username: 1,
+          fullName: 1,
+          email: 1,
+          avatar: 1,
+          bio: 1,
+          portfolio: 1,
+          follower: 1,
+          following: 1,
+          posts: 1,
+          createdAt: 1,
+          refreshToken: 1,
+        },
+      },
+    ]);
 
     if (!user) {
       throw new ApiError(401, "invalid refresh token");
     }
 
-    if (incomingRefreshToken !== user?.refreshToken) {
+    if (incomingRefreshToken !== user[0]?.refreshToken) {
       throw new ApiError(401, "Refresh token is expired or used");
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      user?._id
+      user[0]?._id
     );
 
     return res
@@ -317,7 +404,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken, user },
+          { accessToken, refreshToken, user: user[0] },
           "Access Token refreshed"
         )
       );
@@ -519,8 +606,6 @@ const resetPassword = asyncHandler(async (req, res) => {
 const editUserProfile = asyncHandler(async (req, res) => {
   const { bio, avatar, fullName, portfolio, username } = req.body;
   const avatarLocalPath = req?.file?.path;
-
-  console.log({ username, reqUsername: req.user?.username });
 
   if (username !== req.user?.username) {
     const existingUsername = await User.findOne({ username });
