@@ -1547,8 +1547,8 @@ const getUserByUsername = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!user) {
-    throw new ApiError(404, "User not found");
+  if (user.length === 0) {
+    return res.status(404).json(new ApiResponse(404, {}, "User not found"));
   }
 
   return res
