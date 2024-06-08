@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId, Types } from "mongoose";
 import { Comment } from "../models/comment.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -36,6 +36,7 @@ const addComment = asyncHandler(async (req, res) => {
   if (!text) {
     throw new ApiError(400, "Comment missing");
   }
+
   const comment = await Comment.create({
     postId,
     user: req?.user?._id,
@@ -46,9 +47,55 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong while creating comment");
   }
 
-  const post = await Posts.findById(postId);
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
-  if (!post?.owner.equals(req.user._id)) {
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  if (!post[0]?.owner.equals(req.user._id)) {
     const notification = await Notification.create({
       userId: post?.owner,
       type: "comment",
@@ -64,7 +111,9 @@ const addComment = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(201, {}, "Comment created successfully"));
+    .json(
+      new ApiResponse(201, post[0].comments, "Comment created successfully")
+    );
 });
 
 const deleteComment = asyncHandler(async (req, res) => {
@@ -75,7 +124,6 @@ const deleteComment = asyncHandler(async (req, res) => {
   }
 
   const comment = await Comment.findById(commentId);
-  const post = await Posts.findById(comment?.postId);
 
   const deletedComment = await Comment.findByIdAndDelete(commentId);
 
@@ -83,17 +131,67 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while deleting comment");
   }
 
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(comment?.postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
   await Notification.findOneAndDelete({
-    userId: post?.owner,
+    userId: post[0]?.owner,
     type: "comment",
     actionBy: req?.user?._id,
-    post: post?._id,
+    post: post[0]?._id,
     comment: commentId,
   });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Comment deleted successfully"));
+    .json(
+      new ApiResponse(200, post[0].comments, "Comment deleted successfully")
+    );
 });
 
 const editComment = asyncHandler(async (req, res) => {
@@ -113,9 +211,60 @@ const editComment = asyncHandler(async (req, res) => {
   if (!updatedComment) {
     throw new ApiError(400, "Something went wrong updating comment");
   }
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(updatedComment?.postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "comment updated successfully"));
+    .json(
+      new ApiResponse(200, post[0].comments, "comment updated successfully")
+    );
 });
 
 const addLikeToComment = asyncHandler(async (req, res) => {
@@ -131,6 +280,58 @@ const addLikeToComment = asyncHandler(async (req, res) => {
     { new: true }
   );
 
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong while liking comment");
+  }
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(updatedComment?.postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
   if (!updatedComment?.user.equals(req.user._id)) {
     const notification = await Notification.create({
       userId: updatedComment?.user,
@@ -145,13 +346,9 @@ const addLikeToComment = asyncHandler(async (req, res) => {
     }
   }
 
-  if (!updatedComment) {
-    throw new ApiError(400, "Something went wrong while liking comment");
-  }
-
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "comment liked successfully"));
+    .json(new ApiResponse(200, post[0].comments, "comment liked successfully"));
 });
 
 const removeLikeFromComment = asyncHandler(async (req, res) => {
@@ -167,6 +364,61 @@ const removeLikeFromComment = asyncHandler(async (req, res) => {
     { new: true }
   );
 
+  if (!updatedComment) {
+    throw new ApiError(
+      400,
+      "Something went wrong while removing like from comment"
+    );
+  }
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(updatedComment?.postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found");
+  }
+
   await Notification.findOneAndDelete({
     userId: updatedComment?.user,
     type: "commentLike",
@@ -175,16 +427,9 @@ const removeLikeFromComment = asyncHandler(async (req, res) => {
     comment: updatedComment?._id,
   });
 
-  if (!updatedComment) {
-    throw new ApiError(
-      400,
-      "Something went wrong while removing like from comment"
-    );
-  }
-
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "like removed successfully"));
+    .json(new ApiResponse(200, post[0].comments, "like removed successfully"));
 });
 
 export {
