@@ -249,6 +249,7 @@ const loginUser = asyncHandler(async (req, res) => {
         following: 1,
         posts: 1,
         createdAt: 1,
+        guest: 1,
       },
     },
   ]);
@@ -381,6 +382,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
           posts: 1,
           createdAt: 1,
           refreshToken: 1,
+          guest: 1,
         },
       },
     ]);
@@ -827,6 +829,7 @@ const editUserProfile = asyncHandler(async (req, res) => {
         following: 1,
         posts: 1,
         createdAt: 1,
+        guest: 1,
       },
     },
   ]);
@@ -1543,6 +1546,7 @@ const getUserByUsername = asyncHandler(async (req, res) => {
         following: 1,
         posts: 1,
         createdAt: 1,
+        guest: 1,
       },
     },
   ]);
