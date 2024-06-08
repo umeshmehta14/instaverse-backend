@@ -525,6 +525,9 @@ const getPostById = asyncHandler(async (req, res) => {
             },
           },
           {
+            $sort: { createdAt: -1 },
+          },
+          {
             $addFields: {
               owner: { $arrayElemAt: ["$owner", 0] },
             },
