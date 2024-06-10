@@ -204,7 +204,7 @@ const editComment = asyncHandler(async (req, res) => {
 
   const updatedComment = await Comment.findByIdAndUpdate(
     commentId,
-    { text },
+    { text, edit: true },
     { new: true }
   );
 
