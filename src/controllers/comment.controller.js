@@ -97,7 +97,7 @@ const addComment = asyncHandler(async (req, res) => {
 
   if (!post[0]?.owner.equals(req.user._id)) {
     const notification = await Notification.create({
-      userId: post?.owner,
+      userId: post[0]?.owner,
       type: "comment",
       actionBy: req?.user?._id,
       post: postId,
