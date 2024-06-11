@@ -182,7 +182,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   await Notification.findOneAndDelete({
     userId: post[0]?.owner,
     type: "comment",
-    actionBy: req?.user?._id,
+    actionBy: comment?.owner,
     post: post[0]?._id,
     comment: commentId,
   });
