@@ -179,8 +179,6 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
-  console.log({ cOnwer: comment?.user });
-
   await Notification.findOneAndDelete({
     userId: post[0]?.owner,
     type: "comment",
