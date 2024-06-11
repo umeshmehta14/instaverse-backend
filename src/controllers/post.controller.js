@@ -20,12 +20,6 @@ const UploadPost = asyncHandler(async (req, res) => {
       .json(new ApiResponse(400, {}, "Please select a picture"));
   }
 
-  if (!caption) {
-    return res
-      .status(400)
-      .json(new ApiResponse(400, {}, "Please write caption for your post"));
-  }
-
   const uploadedPost = await uploadOnCloudinary(postLocalPath, postFolder);
 
   if (!uploadedPost?.url) {
@@ -39,7 +33,7 @@ const UploadPost = asyncHandler(async (req, res) => {
   const createdPost = await Posts.create({
     url: uploadedPost?.url,
     owner: req?.user?._id,
-    caption,
+    caption: caption ? caption : "",
     publicId: uploadedPost?.public_id,
   });
 
