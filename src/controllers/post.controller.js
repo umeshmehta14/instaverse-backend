@@ -118,6 +118,8 @@ const deletePost = asyncHandler(async (req, res) => {
     throw new ApiError(400, "post is required");
   }
 
+  await Notification.deleteMany({ post: postId });
+
   const post = await Posts.findById(postId);
 
   const deletedPost = await Posts.findByIdAndDelete({ _id: postId });
@@ -128,6 +130,7 @@ const deletePost = asyncHandler(async (req, res) => {
   if (post?.publicId) {
     await deleteFromCloudinary(post?.publicId, postFolder);
   }
+
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "post deleted successfully"));
