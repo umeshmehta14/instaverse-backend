@@ -114,7 +114,7 @@ const addComment = asyncHandler(async (req, res) => {
     }
   }
 
-  if (mentionedUsernames.length > 0) {
+  if (mentionedUsernames?.length > 0) {
     const mentionedUsers = await User.find({
       username: { $in: mentionedUsernames },
     });
@@ -208,16 +208,18 @@ const deleteComment = asyncHandler(async (req, res) => {
     ?.match(/@(\w+)/g)
     ?.map((match) => match.slice(1));
 
-  for (const username of mentionedUsernames) {
-    const mentionedUser = await User.findOne({ username });
-    if (mentionedUser) {
-      await Notification.findOneAndDelete({
-        userId: mentionedUser._id,
-        type: "mention",
-        actionBy: comment.user,
-        post: post[0]?._id,
-        comment: commentId,
-      });
+  if (mentionedUsernames?.length > 0) {
+    for (const username of mentionedUsernames) {
+      const mentionedUser = await User.findOne({ username });
+      if (mentionedUser) {
+        await Notification.findOneAndDelete({
+          userId: mentionedUser._id,
+          type: "mention",
+          actionBy: comment.user,
+          post: post[0]?._id,
+          comment: commentId,
+        });
+      }
     }
   }
 
