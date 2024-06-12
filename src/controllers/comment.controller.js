@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Notification } from "../models/notification.model.js";
 import { Posts } from "../models/posts.model.js";
+import { User } from "../models/user.model.js";
 
 const getPostComments = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -36,6 +37,12 @@ const addComment = asyncHandler(async (req, res) => {
   if (!text) {
     throw new ApiError(400, "Comment missing");
   }
+
+  const mentionedUsernames = text
+    .match(/@(\w+)/g)
+    .map((match) => match.slice(1));
+
+  console.log({ mentionedUsernames });
 
   const comment = await Comment.create({
     postId,
@@ -109,6 +116,26 @@ const addComment = asyncHandler(async (req, res) => {
     }
   }
 
+  if (mentionedUsernames.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: mentionedUsernames },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const notification = await Notification.create({
+        userId: mentionedUser?._id,
+        type: "mention",
+        actionBy: req?.user?._id,
+        post: postId,
+        comment: comment?._id,
+      });
+
+      if (!notification) {
+        throw new ApiError(500, "internal error");
+      }
+    }
+  }
+
   return res
     .status(201)
     .json(
@@ -177,6 +204,23 @@ const deleteComment = asyncHandler(async (req, res) => {
 
   if (!post) {
     throw new ApiError(400, "Post not found");
+  }
+
+  const mentionedUsernames = comment?.text
+    ?.match(/@(\w+)/g)
+    ?.map((match) => match.slice(1));
+
+  for (const username of mentionedUsernames) {
+    const mentionedUser = await User.findOne({ username });
+    if (mentionedUser) {
+      await Notification.findOneAndDelete({
+        userId: mentionedUser._id,
+        type: "mention",
+        actionBy: comment.user,
+        post: post[0]?._id,
+        comment: commentId,
+      });
+    }
   }
 
   await Notification.findOneAndDelete({
