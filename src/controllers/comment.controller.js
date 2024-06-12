@@ -39,8 +39,8 @@ const addComment = asyncHandler(async (req, res) => {
   }
 
   const mentionedUsernames = text
-    .match(/@(\w+)/g)
-    .map((match) => match.slice(1));
+    ?.match(/@(\w+)/g)
+    ?.map((match) => match.slice(1));
 
   const comment = await Comment.create({
     postId,
