@@ -223,6 +223,11 @@ const deleteComment = asyncHandler(async (req, res) => {
     }
   }
 
+  await Notification.deleteMany({
+    type: "commentLike",
+    comment: commentId,
+  });
+
   await Notification.findOneAndDelete({
     userId: post[0]?.owner,
     type: "comment",
