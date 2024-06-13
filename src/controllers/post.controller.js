@@ -245,6 +245,7 @@ const getHomePosts = asyncHandler(async (req, res) => {
               _id: 1,
               username: 1,
               "avatar.url": 1,
+              createdAt: 1,
             },
           },
         ],
