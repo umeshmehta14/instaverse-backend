@@ -564,6 +564,7 @@ const getPostById = asyncHandler(async (req, res) => {
               _id: 1,
               avatar: 1,
               username: 1,
+              createdAt: 1,
             },
           },
         ],
