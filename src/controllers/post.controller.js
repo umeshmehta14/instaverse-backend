@@ -9,6 +9,7 @@ import {
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { Notification } from "../models/notification.model.js";
+import { User } from "../models/user.model.js";
 
 const UploadPost = asyncHandler(async (req, res) => {
   const { caption } = req.body;
@@ -331,6 +332,16 @@ const addLike = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { likedPosts: postId } },
+    { new: true }
+  );
+
+  if (!updatedUser) {
+    throw new ApiError(500, "Failed to update user's liked posts");
+  }
+
   const likes = await Posts.aggregate([
     { $match: { _id: new Types.ObjectId(postId) } },
     {
@@ -390,6 +401,16 @@ const removeLike = asyncHandler(async (req, res) => {
     { $pull: { likes: userId } },
     { new: true }
   );
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $pull: { likedPosts: postId } },
+    { new: true }
+  );
+
+  if (!updatedUser) {
+    throw new ApiError(500, "Failed to update user's liked posts");
+  }
 
   if (!likedPost) {
     throw new ApiError(400, "Post not found");
