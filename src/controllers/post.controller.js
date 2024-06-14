@@ -21,6 +21,10 @@ const UploadPost = asyncHandler(async (req, res) => {
       .json(new ApiResponse(400, {}, "Please select a picture"));
   }
 
+  const mentionedUsernames = text
+    ?.match(/@(\w+)/g)
+    ?.map((match) => match.slice(1));
+
   const uploadedPost = await uploadOnCloudinary(postLocalPath, postFolder);
 
   if (!uploadedPost?.url) {
@@ -105,6 +109,25 @@ const UploadPost = asyncHandler(async (req, res) => {
 
   if (!post) {
     throw new ApiError(401, "something went wrong while uploading post");
+  }
+
+  if (mentionedUsernames?.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: mentionedUsernames },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const notification = await Notification.create({
+        userId: mentionedUser?._id,
+        type: "postMention",
+        actionBy: req?.user?._id,
+        post: createdPost?._id,
+      });
+
+      if (!notification) {
+        throw new ApiError(500, "internal error");
+      }
+    }
   }
 
   return res
