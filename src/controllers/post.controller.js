@@ -141,10 +141,6 @@ const editPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   const { caption } = req.body;
 
-  if (!caption) {
-    throw new ApiError(400, "caption required");
-  }
-
   const updatedPost = await Posts.findByIdAndUpdate(
     postId,
     { caption, edit: true },
