@@ -44,6 +44,7 @@ const getUserNotification = asyncHandler(async (req, res) => {
             $project: {
               _id: 1,
               url: 1,
+              caption: 1,
             },
           },
         ],

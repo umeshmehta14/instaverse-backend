@@ -21,7 +21,7 @@ const UploadPost = asyncHandler(async (req, res) => {
       .json(new ApiResponse(400, {}, "Please select a picture"));
   }
 
-  const mentionedUsernames = text
+  const mentionedUsernames = caption
     ?.match(/@(\w+)/g)
     ?.map((match) => match.slice(1));
 
