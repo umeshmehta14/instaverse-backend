@@ -164,6 +164,29 @@ const editPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   const { caption } = req.body;
 
+  const oldPost = await Posts.findById(postId);
+
+  if (!oldPost) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  const oldCaption = oldPost.caption;
+
+  const extractMentions = (caption) => {
+    return caption?.match(/@(\w+)/g)?.map((match) => match.slice(1)) || [];
+  };
+
+  const oldMentions = extractMentions(oldCaption);
+  const newMentions = extractMentions(caption);
+
+  const newUniqueMentions = newMentions.filter(
+    (mention) => !oldMentions.includes(mention)
+  );
+
+  const removedMentions = oldMentions.filter(
+    (mention) => !newMentions.includes(mention)
+  );
+
   const updatedPost = await Posts.findByIdAndUpdate(
     postId,
     { caption, edit: true },
@@ -172,6 +195,44 @@ const editPost = asyncHandler(async (req, res) => {
 
   if (!updatedPost) {
     throw new ApiError(404, "Post not found");
+  }
+
+  if (newUniqueMentions.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: newUniqueMentions },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const notification = await Notification.create({
+        userId: mentionedUser?._id,
+        type: "postMention",
+        actionBy: req?.user?._id,
+        post: postId,
+      });
+
+      if (!notification) {
+        throw new ApiError(500, "Internal error");
+      }
+    }
+  }
+
+  if (removedMentions.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: removedMentions },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const result = await Notification.deleteMany({
+        userId: mentionedUser?._id,
+        type: "postMention",
+        actionBy: req?.user?._id,
+        post: postId,
+      });
+
+      if (!result) {
+        throw new ApiError(500, "Internal error");
+      }
+    }
   }
 
   res
