@@ -148,6 +148,9 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid post id");
   }
 
+  const comment = await Comment.findById(commentId);
+
+  await Notification.deleteMany({ comment: commentId });
   const deletedComment = await Comment.findByIdAndDelete(commentId);
 
   if (!deletedComment) {
@@ -201,8 +204,6 @@ const deleteComment = asyncHandler(async (req, res) => {
   if (!post) {
     throw new ApiError(400, "Post not found");
   }
-
-  await Notification.deleteMany({ comment: commentId });
 
   return res
     .status(200)
