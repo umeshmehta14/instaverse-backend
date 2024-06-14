@@ -862,6 +862,11 @@ const getBookmark = asyncHandler(async (req, res) => {
             },
           },
           {
+            $sort: {
+              createdAt: -1,
+            },
+          },
+          {
             $project: {
               _id: 1,
               likes: 1,
@@ -929,6 +934,11 @@ const addBookmark = asyncHandler(async (req, res) => {
             },
           },
           {
+            $sort: {
+              createdAt: -1,
+            },
+          },
+          {
             $project: {
               _id: 1,
               likes: 1,
@@ -989,6 +999,11 @@ const removeBookmark = asyncHandler(async (req, res) => {
               localField: "_id",
               foreignField: "postId",
               as: "comments",
+            },
+          },
+          {
+            $sort: {
+              createdAt: -1,
             },
           },
           {
@@ -1582,7 +1597,7 @@ const getLikedPost = asyncHandler(async (req, res) => {
           },
           {
             $sort: {
-              createdAt: 1,
+              createdAt: -1,
             },
           },
           {
