@@ -148,8 +148,6 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid post id");
   }
 
-  const comment = await Comment.findById(commentId);
-
   const deletedComment = await Comment.findByIdAndDelete(commentId);
 
   if (!deletedComment) {
@@ -221,6 +219,28 @@ const editComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid comment id");
   }
 
+  const oldComment = await Comment.findById(commentId);
+  if (!oldComment) {
+    throw new ApiError(404, "Comment not found");
+  }
+
+  const oldText = oldComment.text;
+
+  const extractMentions = (text) => {
+    return text?.match(/@(\w+)/g)?.map((match) => match.slice(1)) || [];
+  };
+
+  const oldMentions = extractMentions(oldText);
+  const newMentions = extractMentions(text);
+
+  const newUniqueMentions = newMentions.filter(
+    (mention) => !oldMentions.includes(mention)
+  );
+
+  const removedMentions = oldMentions.filter(
+    (mention) => !newMentions.includes(mention)
+  );
+
   const updatedComment = await Comment.findByIdAndUpdate(
     commentId,
     { text, edit: true },
@@ -277,6 +297,46 @@ const editComment = asyncHandler(async (req, res) => {
 
   if (!post) {
     throw new ApiError(400, "Post not found");
+  }
+
+  if (newUniqueMentions.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: newUniqueMentions },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const notification = await Notification.create({
+        userId: mentionedUser?._id,
+        type: "mention",
+        actionBy: req?.user?._id,
+        post: updatedComment?.postId,
+        comment: updatedComment?._id,
+      });
+
+      if (!notification) {
+        throw new ApiError(500, "Internal error");
+      }
+    }
+  }
+
+  if (removedMentions.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: removedMentions },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const result = await Notification.deleteMany({
+        userId: mentionedUser?._id,
+        type: "mention",
+        actionBy: req?.user?._id,
+        post: updatedComment?.postId,
+        comment: updatedComment?._id,
+      });
+
+      if (!result) {
+        throw new ApiError(500, "Internal error");
+      }
+    }
   }
 
   return res
