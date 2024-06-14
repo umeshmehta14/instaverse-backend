@@ -204,37 +204,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
-  const mentionedUsernames = comment?.text
-    ?.match(/@(\w+)/g)
-    ?.map((match) => match.slice(1));
-
-  if (mentionedUsernames?.length > 0) {
-    for (const username of mentionedUsernames) {
-      const mentionedUser = await User.findOne({ username });
-      if (mentionedUser) {
-        await Notification.findOneAndDelete({
-          userId: mentionedUser._id,
-          type: "mention",
-          actionBy: comment.user,
-          post: post[0]?._id,
-          comment: commentId,
-        });
-      }
-    }
-  }
-
-  await Notification.deleteMany({
-    type: "commentLike",
-    comment: commentId,
-  });
-
-  await Notification.findOneAndDelete({
-    userId: post[0]?.owner,
-    type: "comment",
-    actionBy: comment?.user,
-    post: post[0]?._id,
-    comment: commentId,
-  });
+  await Notification.deleteMany({ comment: commentId });
 
   return res
     .status(200)
