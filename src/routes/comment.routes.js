@@ -4,6 +4,7 @@ import {
   addLikeToComment,
   addReplyToComment,
   deleteComment,
+  deleteReplyFromComment,
   editComment,
   getPostComments,
   removeLikeFromComment,
@@ -26,5 +27,8 @@ commentRouter
   .route("/unlike/:commentId")
   .patch(verifyJwt, removeLikeFromComment);
 commentRouter.route("/:commentId/reply").patch(verifyJwt, addReplyToComment);
+commentRouter
+  .route("/:commentId/replies/:replyId")
+  .delete(verifyJwt, deleteReplyFromComment);
 
 export default commentRouter;
