@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   addComment,
   addLikeToComment,
+  addReplyToComment,
   deleteComment,
   editComment,
   getPostComments,
@@ -24,5 +25,6 @@ commentRouter.route("/like/:commentId").patch(verifyJwt, addLikeToComment);
 commentRouter
   .route("/unlike/:commentId")
   .patch(verifyJwt, removeLikeFromComment);
+commentRouter.route("/:commentId/reply").patch(verifyJwt, addReplyToComment);
 
 export default commentRouter;

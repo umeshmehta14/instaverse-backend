@@ -512,6 +512,175 @@ const removeLikeFromComment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, post[0].comments, "like removed successfully"));
 });
 
+const addReplyToComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const { text } = req.body;
+
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  if (!text) {
+    throw new ApiError(400, "Reply text missing");
+  }
+
+  const comment = await Comment.findById(commentId);
+
+  const mentionedUsernames = text
+    ?.match(/@(\w+)/g)
+    ?.map((match) => match.slice(1));
+
+  const reply = {
+    owner: req.user._id,
+    text,
+  };
+
+  const updatedComment = await Comment.findByIdAndUpdate(
+    commentId,
+    { $push: { replies: reply } },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong adding reply");
+  }
+
+  const post = await Posts.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(comment?.postId),
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "postId",
+        as: "comments",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: { $arrayElemAt: ["$owner", 0] },
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              let: { replyUsers: "$replies.owner" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $isArray: "$$replyUsers" },
+                        { $in: ["$_id", "$$replyUsers"] },
+                      ],
+                    },
+                  },
+                },
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+              as: "replyOwners",
+            },
+          },
+          {
+            $addFields: {
+              replies: {
+                $map: {
+                  input: {
+                    $sortArray: {
+                      input: "$replies",
+                      sortBy: { createdAt: -1 },
+                    },
+                  },
+                  as: "reply",
+                  in: {
+                    $mergeObjects: [
+                      "$$reply",
+                      {
+                        owner: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: "$replyOwners",
+                                as: "replyOwner",
+                                cond: {
+                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
+                                },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!post || post.length === 0) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  if (mentionedUsernames?.length > 0) {
+    const mentionedUsers = await User.find({
+      username: { $in: mentionedUsernames },
+    });
+
+    for (const mentionedUser of mentionedUsers) {
+      const notification = await Notification.create({
+        userId: mentionedUser?._id,
+        type: "mention",
+        actionBy: req?.user?._id,
+        post: comment?.postId,
+        comment: comment?._id,
+      });
+
+      if (!notification) {
+        throw new ApiError(500, "internal error");
+      }
+    }
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, post[0]?.comments, "Reply added successfully"));
+});
+
 export {
   getPostComments,
   addComment,
@@ -519,4 +688,5 @@ export {
   editComment,
   addLikeToComment,
   removeLikeFromComment,
+  addReplyToComment,
 };
