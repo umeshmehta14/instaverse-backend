@@ -7,17 +7,11 @@ import { Notification } from "../models/notification.model.js";
 import { Posts } from "../models/posts.model.js";
 import { User } from "../models/user.model.js";
 
-const getPostComments = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  if (!isValidObjectId(postId)) {
-    throw new ApiError(400, "Invalid post id");
-  }
-
-  const post = await Posts.aggregate([
+const getComments = async (_id) => {
+  return await Posts.aggregate([
     {
       $match: {
-        _id: new Types.ObjectId(postId),
+        _id: new Types.ObjectId(_id),
       },
     },
     {
@@ -120,6 +114,16 @@ const getPostComments = asyncHandler(async (req, res) => {
       },
     },
   ]);
+};
+
+const getPostComments = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  if (!isValidObjectId(postId)) {
+    throw new ApiError(400, "Invalid post id");
+  }
+
+  const post = await getComments(postId);
 
   return res
     .status(200)
@@ -154,112 +158,7 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong while creating comment");
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(postId);
 
   if (!post) {
     throw new ApiError(400, "Post not found");
@@ -322,112 +221,7 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Something went wrong while deleting comment");
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(comment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(comment?.postId);
 
   if (!post) {
     throw new ApiError(400, "Post not found");
@@ -480,112 +274,7 @@ const editComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong updating comment");
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(updatedComment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(updatedComment?.postId);
 
   if (!post) {
     throw new ApiError(400, "Post not found");
@@ -655,114 +344,9 @@ const addLikeToComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong while liking comment");
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(updatedComment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(updatedComment?.postId);
 
-  if (!post) {
+  if (!post || post?.length === 0) {
     throw new ApiError(400, "Post not found");
   }
 
@@ -805,114 +389,9 @@ const removeLikeFromComment = asyncHandler(async (req, res) => {
     );
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(updatedComment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(updatedComment?.postId);
 
-  if (!post) {
+  if (!post || post?.length === 0) {
     throw new ApiError(400, "Post not found");
   }
 
@@ -962,114 +441,9 @@ const addReplyToComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong adding reply");
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(comment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(comment?.postId);
 
-  if (!post || post.length === 0) {
+  if (!post || post?.length === 0) {
     throw new ApiError(400, "Post not found");
   }
 
@@ -1148,120 +522,95 @@ const deleteReplyFromComment = asyncHandler(async (req, res) => {
     }
   }
 
-  const post = await Posts.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(comment?.postId),
-      },
-    },
-    {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "postId",
-        as: "comments",
-        pipeline: [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: { $arrayElemAt: ["$owner", 0] },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              let: { replyUsers: "$replies.owner" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $isArray: "$$replyUsers" },
-                        { $in: ["$_id", "$$replyUsers"] },
-                      ],
-                    },
-                  },
-                },
-                {
-                  $project: {
-                    username: 1,
-                    _id: 1,
-                    "avatar.url": 1,
-                    createdAt: 1,
-                  },
-                },
-              ],
-              as: "replyOwners",
-            },
-          },
-          {
-            $addFields: {
-              replies: {
-                $map: {
-                  input: {
-                    $sortArray: {
-                      input: "$replies",
-                      sortBy: { createdAt: -1 },
-                    },
-                  },
-                  as: "reply",
-                  in: {
-                    $mergeObjects: [
-                      "$$reply",
-                      {
-                        owner: {
-                          $arrayElemAt: [
-                            {
-                              $filter: {
-                                input: "$replyOwners",
-                                as: "replyOwner",
-                                cond: {
-                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
-                                },
-                              },
-                            },
-                            0,
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-          {
-            $sort: { createdAt: -1 },
-          },
-        ],
-      },
-    },
-  ]);
+  const post = await getComments(comment?.postId);
 
-  if (!post || post.length === 0) {
+  if (!post || post?.length === 0) {
     throw new ApiError(400, "Post not found");
   }
 
   return res
     .status(200)
     .json(new ApiResponse(200, post[0].comments, "Reply deleted successfully"));
+});
+
+const addLikeToReply = asyncHandler(async (req, res) => {
+  const { commentId, replyId } = req.params;
+
+  if (!isValidObjectId(commentId) || !isValidObjectId(replyId)) {
+    throw new ApiError(400, "Invalid comment id or reply id");
+  }
+
+  const updatedComment = await Comment.findOneAndUpdate(
+    { _id: commentId, "replies._id": replyId },
+    { $addToSet: { "replies.$.likes": req.user._id } },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong while liking the reply");
+  }
+
+  const post = await getComments(updatedComment?.postId);
+
+  if (!post || post?.length === 0) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  const reply = updatedComment.replies.id(replyId);
+
+  if (!reply?.owner.equals(req.user._id)) {
+    const notification = await Notification.create({
+      userId: reply?.owner,
+      type: "commentLike",
+      actionBy: req?.user?._id,
+      post: updatedComment?.postId,
+      comment: updatedComment?._id,
+    });
+
+    if (!notification) {
+      throw new ApiError(500, "internal error");
+    }
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post[0].comments, "Reply liked successfully"));
+});
+
+const removeLikeFromReply = asyncHandler(async (req, res) => {
+  const { commentId, replyId } = req.params;
+
+  if (!isValidObjectId(commentId) || !isValidObjectId(replyId)) {
+    throw new ApiError(400, "Invalid comment id or reply id");
+  }
+
+  const updatedComment = await Comment.findOneAndUpdate(
+    { _id: commentId, "replies._id": replyId },
+    { $pull: { "replies.$.likes": req.user._id } },
+    { new: true }
+  );
+
+  if (!updatedComment) {
+    throw new ApiError(400, "Something went wrong while liking the reply");
+  }
+
+  const post = await getComments(updatedComment?.postId);
+
+  if (!post || post?.length === 0) {
+    throw new ApiError(400, "Post not found");
+  }
+
+  await Notification.findOneAndDelete({
+    userId: updatedComment?.user,
+    type: "commentLike",
+    actionBy: req?.user?._id,
+    post: updatedComment?.postId,
+    comment: updatedComment?._id,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post[0].comments, "Reply liked successfully"));
 });
 
 export {
@@ -1273,4 +622,6 @@ export {
   removeLikeFromComment,
   addReplyToComment,
   deleteReplyFromComment,
+  addLikeToReply,
+  removeLikeFromReply,
 };

@@ -2,12 +2,14 @@ import { Router } from "express";
 import {
   addComment,
   addLikeToComment,
+  addLikeToReply,
   addReplyToComment,
   deleteComment,
   deleteReplyFromComment,
   editComment,
   getPostComments,
   removeLikeFromComment,
+  removeLikeFromReply,
 } from "../controllers/comment.controller.js";
 import { verifyJwt } from "../middlewares/auth.middleware.js";
 
@@ -30,5 +32,12 @@ commentRouter.route("/:commentId/reply").patch(verifyJwt, addReplyToComment);
 commentRouter
   .route("/:commentId/replies/:replyId")
   .delete(verifyJwt, deleteReplyFromComment);
+
+commentRouter
+  .route("/:commentId/replies/:replyId/like")
+  .patch(verifyJwt, addLikeToReply);
+commentRouter
+  .route("/:commentId/replies/:replyId/unlike")
+  .patch(verifyJwt, removeLikeFromReply);
 
 export default commentRouter;
