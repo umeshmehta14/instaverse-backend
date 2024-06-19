@@ -624,12 +624,75 @@ const getPostById = asyncHandler(async (req, res) => {
             },
           },
           {
-            $sort: { createdAt: -1 },
-          },
-          {
             $addFields: {
               owner: { $arrayElemAt: ["$owner", 0] },
             },
+          },
+          {
+            $lookup: {
+              from: "users",
+              let: { replyUsers: "$replies.owner" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $isArray: "$$replyUsers" },
+                        { $in: ["$_id", "$$replyUsers"] },
+                      ],
+                    },
+                  },
+                },
+                {
+                  $project: {
+                    username: 1,
+                    _id: 1,
+                    "avatar.url": 1,
+                    createdAt: 1,
+                  },
+                },
+              ],
+              as: "replyOwners",
+            },
+          },
+          {
+            $addFields: {
+              replies: {
+                $map: {
+                  input: {
+                    $sortArray: {
+                      input: "$replies",
+                      sortBy: { createdAt: -1 },
+                    },
+                  },
+                  as: "reply",
+                  in: {
+                    $mergeObjects: [
+                      "$$reply",
+                      {
+                        owner: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: "$replyOwners",
+                                as: "replyOwner",
+                                cond: {
+                                  $eq: ["$$replyOwner._id", "$$reply.owner"],
+                                },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
           },
         ],
       },
