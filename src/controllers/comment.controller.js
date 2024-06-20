@@ -453,16 +453,18 @@ const addReplyToComment = asyncHandler(async (req, res) => {
     });
 
     for (const mentionedUser of mentionedUsers) {
-      const notification = await Notification.create({
-        userId: mentionedUser?._id,
-        type: "mention",
-        actionBy: req?.user?._id,
-        post: comment?.postId,
-        comment: comment?._id,
-      });
+      if (!mentionedUser?.owner.equals(req.user._id)) {
+        const notification = await Notification.create({
+          userId: mentionedUser?._id,
+          type: "mention",
+          actionBy: req?.user?._id,
+          post: comment?.postId,
+          comment: comment?._id,
+        });
 
-      if (!notification) {
-        throw new ApiError(500, "internal error");
+        if (!notification) {
+          throw new ApiError(500, "internal error");
+        }
       }
     }
   }
