@@ -27,6 +27,7 @@ const notificationSchema = new Schema(
     post: { type: Schema.Types.ObjectId, ref: "Post" },
     comment: { type: Schema.Types.ObjectId, ref: "Comment" },
     read: { type: Boolean, default: false },
+    replyText: { type: String, default: "" },
   },
   { timestamps: true }
 );

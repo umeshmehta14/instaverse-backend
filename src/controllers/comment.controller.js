@@ -505,7 +505,7 @@ const deleteReplyFromComment = asyncHandler(async (req, res) => {
     type: "commentLike",
     post: comment?.postId,
     comment: comment?._id,
-    text: reply?.text,
+    replyText: reply?.text,
   });
 
   if (replyIndex === -1) {
@@ -575,6 +575,7 @@ const addLikeToReply = asyncHandler(async (req, res) => {
       actionBy: req?.user?._id,
       post: updatedComment?.postId,
       comment: updatedComment?._id,
+      replyText: reply?.text,
     });
 
     if (!notification) {
@@ -594,6 +595,15 @@ const removeLikeFromReply = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid comment id or reply id");
   }
 
+  const comment = await Comment.findOne({
+    _id: commentId,
+    "replies._id": replyId,
+  });
+
+  if (!comment) {
+    throw new ApiError(404, "Comment or reply not found");
+  }
+
   const updatedComment = await Comment.findOneAndUpdate(
     { _id: commentId, "replies._id": replyId },
     { $pull: { "replies.$.likes": req.user._id } },
@@ -610,12 +620,15 @@ const removeLikeFromReply = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
+  const reply = comment.replies.id(replyId);
+
   await Notification.findOneAndDelete({
     userId: updatedComment?.user,
     type: "commentLike",
     actionBy: req?.user?._id,
     post: updatedComment?.postId,
     comment: updatedComment?._id,
+    replyText: reply?.text,
   });
 
   return res
