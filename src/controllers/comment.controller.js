@@ -447,8 +447,6 @@ const addReplyToComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
-  console.log({ mentionedUsernames });
-
   if (mentionedUsernames?.length > 0) {
     const mentionedUsers = await User.find({
       username: { $in: mentionedUsernames },
@@ -501,6 +499,14 @@ const deleteReplyFromComment = asyncHandler(async (req, res) => {
   const replyIndex = comment.replies.findIndex((reply) =>
     reply._id.equals(replyId)
   );
+
+  await Notification.deleteMany({
+    userId: comment?.user,
+    type: "commentLike",
+    post: comment?.postId,
+    comment: comment?._id,
+    text: reply?.text,
+  });
 
   if (replyIndex === -1) {
     throw new ApiError(404, "Reply not found");
@@ -562,7 +568,7 @@ const addLikeToReply = asyncHandler(async (req, res) => {
 
   const reply = updatedComment.replies.id(replyId);
 
-  if (!reply?.owner.equals(req.user._id)) {
+  if (!reply?.owner?.equals(req.user._id)) {
     const notification = await Notification.create({
       userId: reply?.owner,
       type: "commentLike",
