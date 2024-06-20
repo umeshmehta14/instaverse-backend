@@ -447,13 +447,15 @@ const addReplyToComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Post not found");
   }
 
+  console.log({ mentionedUsernames });
+
   if (mentionedUsernames?.length > 0) {
     const mentionedUsers = await User.find({
       username: { $in: mentionedUsernames },
     });
 
     for (const mentionedUser of mentionedUsers) {
-      if (!mentionedUser?.owner.equals(req.user._id)) {
+      if (!mentionedUser?.owner?.equals(req.user._id)) {
         const notification = await Notification.create({
           userId: mentionedUser?._id,
           type: "mention",
