@@ -662,7 +662,7 @@ const getPostById = asyncHandler(async (req, res) => {
                   input: {
                     $sortArray: {
                       input: "$replies",
-                      sortBy: { createdAt: -1 },
+                      sortBy: { createdAt: 1 },
                     },
                   },
                   as: "reply",

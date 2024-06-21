@@ -78,7 +78,7 @@ const getComments = async (_id) => {
                   input: {
                     $sortArray: {
                       input: "$replies",
-                      sortBy: { createdAt: -1 },
+                      sortBy: { createdAt: 1 },
                     },
                   },
                   as: "reply",
