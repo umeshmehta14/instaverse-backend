@@ -7,7 +7,9 @@ import {
   deleteComment,
   deleteReplyFromComment,
   editComment,
+  getCommentLikeUsers,
   getPostComments,
+  getReplyLikeUsers,
   removeLikeFromComment,
   removeLikeFromReply,
 } from "../controllers/comment.controller.js";
@@ -39,5 +41,12 @@ commentRouter
 commentRouter
   .route("/:commentId/replies/:replyId/unlike")
   .patch(verifyJwt, removeLikeFromReply);
+
+commentRouter
+  .route("/:commentId/liked-user")
+  .get(verifyJwt, getCommentLikeUsers);
+commentRouter
+  .route("/:commentId/liked-user/:replyId/reply-like")
+  .get(verifyJwt, getReplyLikeUsers);
 
 export default commentRouter;

@@ -636,6 +636,119 @@ const removeLikeFromReply = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, post[0].comments, "Reply liked successfully"));
 });
 
+const getCommentLikeUsers = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+
+  if (!isValidObjectId(commentId)) {
+    throw new ApiError(400, "Invalid comment id");
+  }
+
+  const likedUsers = await Comment.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(commentId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "likes",
+        foreignField: "_id",
+        as: "likes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+              follower: 1,
+              following: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        likes: 1,
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, likedUsers[0].likes, "likes fetched successfully")
+    );
+});
+
+const getReplyLikeUsers = asyncHandler(async (req, res) => {
+  const { commentId, replyId } = req.params;
+
+  if (!isValidObjectId(commentId) || !isValidObjectId(replyId)) {
+    throw new ApiError(400, "Invalid comment or reply id");
+  }
+  const likedUsers = await Comment.aggregate([
+    {
+      $match: {
+        _id: new Types.ObjectId(commentId),
+      },
+    },
+    {
+      $unwind: "$replies",
+    },
+    {
+      $match: {
+        "replies._id": new Types.ObjectId(replyId),
+      },
+    },
+    {
+      $project: {
+        likes: "$replies.likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "likes",
+        foreignField: "_id",
+        as: "likedUsers",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              "avatar.url": 1,
+              follower: 1,
+              following: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        likedUsers: 1,
+      },
+    },
+  ]);
+
+  if (likedUsers.length === 0) {
+    throw new ApiError(404, "Comment or reply not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        likedUsers[0].likedUsers,
+        "Likes fetched successfully"
+      )
+    );
+});
+
 export {
   getPostComments,
   addComment,
@@ -647,4 +760,6 @@ export {
   deleteReplyFromComment,
   addLikeToReply,
   removeLikeFromReply,
+  getCommentLikeUsers,
+  getReplyLikeUsers,
 };
