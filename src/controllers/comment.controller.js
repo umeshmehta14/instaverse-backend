@@ -288,16 +288,18 @@ const editComment = asyncHandler(async (req, res) => {
     });
 
     for (const mentionedUser of mentionedUsers) {
-      const notification = await Notification.create({
-        userId: mentionedUser?._id,
-        type: "mention",
-        actionBy: req?.user?._id,
-        post: updatedComment?.postId,
-        comment: updatedComment?._id,
-      });
+      if (!mentionedUser?._id.equals(req.user._id)) {
+        const notification = await Notification.create({
+          userId: mentionedUser?._id,
+          type: "mention",
+          actionBy: req?.user?._id,
+          post: updatedComment?.postId,
+          comment: updatedComment?._id,
+        });
 
-      if (!notification) {
-        throw new ApiError(500, "Internal error");
+        if (!notification) {
+          throw new ApiError(500, "Internal error");
+        }
       }
     }
   }
