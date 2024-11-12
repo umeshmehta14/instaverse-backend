@@ -70,6 +70,50 @@ const registerUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
 
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: { rejectUnauthorized: false },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "Welcome to Instaverse, " + fullName + "!",
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h1 style="color: #007bff; text-align: center;">Welcome to Instaverse!</h1>
+        <p style="font-size: 1.1em; color: #555;">Dear ${fullName},</p>
+        <p style="font-size: 1em; color: #555;">
+          Thank you for joining <strong>Instaverse</strong>! We’re thrilled to have you on board. Here, you’ll find a vibrant community and an easy way to connect, share, and grow.
+        </p>
+        <p style="font-size: 1em; color: #555;">
+          Feel free to explore our platform and let us know if there’s anything we can do to enhance your experience.
+        </p>
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="https://instaverse-um14.netlify.app/" style="background-color: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Get Started</a>
+        </div>
+        <p style="font-size: 1em; color: #555; margin-top: 20px;">
+          Best regards,<br>
+          Umesh Mehta
+        </p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #aaa; text-align: center;">
+          © 2024 Instaverse, All Rights Reserved. <br>
+          <a href="https://instaverse-um14.netlify.app/" style="color: #aaa; text-decoration: none;">Visit our website</a> | <a href="https://umesh-portfolio-um14.netlify.app/" style="color: #aaa; text-decoration: none;">Contact us</a>
+        </p>
+      </div>
+    `,
+  };
+  transporter.sendMail(mailOptions, function (error) {
+    if (error) {
+      console.error("Failed to send welcome email:", error);
+    }
+  });
+
   return res
     .status(201)
     .cookie("accessToken", accessToken, options)
@@ -253,6 +297,56 @@ const loginUser = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASS,
+    },
+    tls: { rejectUnauthorized: false },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: user.email,
+    subject: "Instaverse Login Notification",
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #007bff; text-align: center;">Hello, ${user.fullName}!</h2>
+        <p style="font-size: 1em; color: #555; text-align: center;">
+          We noticed a new login to your Instaverse account. If this was you, feel free to ignore this email.
+        </p>
+        <p style="font-size: 1em; color: #555; text-align: center;">
+          <strong>Login Details:</strong>
+        </p>
+        <ul style="list-style-type: none; padding: 0; font-size: 1em; color: #555; text-align: center;">
+          <li><strong>Device:</strong> ${req.device || "Unknown"}</li>
+          <li><strong>Location:</strong> ${req.location || "Unknown"}</li>
+          <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
+        </ul>
+        <p style="font-size: 1em; color: #555; text-align: center;">
+          If this wasn’t you, please <a href="https://instaverse-um14.netlify.app/accounts/password/emailConfirmation/" style="color: #007bff; text-decoration: none;">reset your password</a> immediately for security.
+        </p>
+        <p style="font-size: 1em; color: #555; text-align: center;">
+          Best regards,<br>
+          Umesh Mehta<br>
+        
+        </p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #aaa; text-align: center;">
+          © 2024 Instaverse, All Rights Reserved. <br>
+          <a href="https://instaverse-um14.netlify.app/" style="color: #aaa; text-decoration: none;">Visit our website</a> | <a href="https://umesh-portfolio-um14.netlify.app/" style="color: #aaa; text-decoration: none;">Contact us</a>
+        </p>
+      </div>
+    `,
+  };
+
+  transporter.sendMail(mailOptions, function (error) {
+    if (error) {
+      console.error("Failed to send login notification email:", error);
+    }
+  });
 
   return res
     .status(200)
@@ -456,6 +550,17 @@ const sendOtp = asyncHandler(async (req, res) => {
 
   transporter.sendMail(mailOptions, function (error) {
     if (error) {
+      if (error.response && error.response.includes("Inbox full")) {
+        return res
+          .status(500)
+          .json(
+            new ApiError(
+              500,
+              {},
+              "Your inbox is full. Please clear space and try again."
+            )
+          );
+      }
       res.status(500).json(new ApiResponse(500, {}, "Failed to send email"));
     } else {
       const maskedEmail = maskEmail(email);
