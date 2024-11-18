@@ -17,8 +17,8 @@ import {
 import { isValidEmail } from "../utils/isValidEmail.js";
 import { Notification } from "../models/notification.model.js";
 import { maskEmail } from "../utils/utils.js";
-const useragent = require("useragent");
-const axios = require("axios");
+import axios from "axios";
+import useragent from "useragent";
 
 const options = {
   httpOnly: true,
