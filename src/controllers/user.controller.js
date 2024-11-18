@@ -17,6 +17,8 @@ import {
 import { isValidEmail } from "../utils/isValidEmail.js";
 import { Notification } from "../models/notification.model.js";
 import { maskEmail } from "../utils/utils.js";
+const useragent = require("useragent");
+const axios = require("axios");
 
 const options = {
   httpOnly: true,
@@ -307,6 +309,19 @@ const loginUser = asyncHandler(async (req, res) => {
     tls: { rejectUnauthorized: false },
   });
 
+  const agent = useragent.parse(req.headers["user-agent"]);
+  const device = `${agent.toAgent()} on ${agent.os}`;
+
+  // Extract IP-based location information
+  let location = "Unknown";
+  try {
+    const response = await axios.get(`http://ip-api.com/json/${req.ip}`);
+    const data = response.data;
+    location = data.city ? `${data.city}, ${data.country}` : "Unknown";
+  } catch (error) {
+    console.error("Failed to retrieve location data:", error);
+  }
+
   const mailOptions = {
     from: process.env.EMAIL,
     to: user.email,
@@ -321,8 +336,8 @@ const loginUser = asyncHandler(async (req, res) => {
           <strong>Login Details:</strong>
         </p>
         <ul style="list-style-type: none; padding: 0; font-size: 1em; color: #555; text-align: center;">
-          <li><strong>Device:</strong> ${req.device || "Unknown"}</li>
-          <li><strong>Location:</strong> ${req.location || "Unknown"}</li>
+             <li><strong>Device:</strong> ${device}</li>
+          <li><strong>Location:</strong> ${location}</li>
           <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
         </ul>
         <p style="font-size: 1em; color: #555; text-align: center;">
